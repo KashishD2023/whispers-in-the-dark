@@ -610,17 +610,44 @@ const ROLE_DESCRIPTIONS = {
 
 
 /*
-  IMPORTANT:
+  PeerJS connection options.
 
-  We deliberately use PeerJS's normal cloud configuration here.
+  We use the default PeerJS cloud signaling server, plus a
+  set of public STUN and TURN servers via the "config" field
+  (this maps straight to RTCPeerConnection's ICE config).
 
-  Do NOT add a fake/custom TURN server.
-  Do NOT use the room code as the PeerJS ID.
+  STUN alone only helps when both devices are on open/simple
+  NATs. Many home routers apply "client isolation" or use
+  symmetric NAT, which blocks direct peer-to-peer traffic even
+  on the same WiFi. TURN servers act as a relay so the
+  connection still works in that case, at the cost of a small
+  amount of added latency and relying on a third-party relay
+  (Open Relay Project's free public TURN servers below).
 */
 
 const PEER_OPTIONS = {
   debug: 3,
-  secure: true
+  secure: true,
+  config: {
+    iceServers: [
+      { urls: "stun:stun.relay.metered.ca:80" },
+      {
+        urls: "turn:global.relay.metered.ca:80",
+        username: "openrelayproject",
+        credential: "openrelayproject"
+      },
+      {
+        urls: "turn:global.relay.metered.ca:443",
+        username: "openrelayproject",
+        credential: "openrelayproject"
+      },
+      {
+        urls: "turn:global.relay.metered.ca:443?transport=tcp",
+        username: "openrelayproject",
+        credential: "openrelayproject"
+      }
+    ]
+  }
 };
 
 
