@@ -7,10 +7,7 @@
   <title>Whispers in the Dark</title>
 
   <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- UPDATED PEERJS -->
   <script src="https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js"></script>
-
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
 
@@ -104,8 +101,7 @@
       font-variant-numeric: tabular-nums;
     }
 
-    input:focus,
-    select:focus {
+    input:focus {
       outline: none;
       border-color: rgba(220, 38, 38, 0.75) !important;
       box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.08);
@@ -201,7 +197,7 @@
         </h2>
 
         <p class="text-zinc-500 mt-2">
-          Enter the 4-character room code
+          Scan the host QR code to connect
         </p>
 
       </div>
@@ -295,10 +291,7 @@
 
     </div>
 
-
     <div class="grid lg:grid-cols-3 gap-5">
-
-      <!-- QR -->
 
       <div class="glass rounded-3xl p-6 text-center">
 
@@ -340,15 +333,13 @@
 
         <p
           id="host-connection-status"
-          class="text-green-400 text-xs mt-4"
+          class="text-yellow-400 text-xs mt-4"
         >
-          Connecting host...
+          Starting host connection...
         </p>
 
       </div>
 
-
-      <!-- PLAYERS -->
 
       <div class="glass rounded-3xl p-6 lg:col-span-2">
 
@@ -375,10 +366,7 @@
 
         </div>
 
-        <div
-          id="host-roster"
-          class="space-y-3"
-        ></div>
+        <div id="host-roster" class="space-y-3"></div>
 
         <div
           id="host-empty"
@@ -513,7 +501,6 @@
 
     </div>
 
-
     <div
       id="player-role-card"
       class="glass rounded-3xl p-7 mb-5 text-center"
@@ -538,7 +525,6 @@
       </p>
 
     </div>
-
 
     <div
       id="player-content"
@@ -606,9 +592,6 @@
    CONFIG
 ============================================================ */
 
-const GAME_NAME = "whispers-in-the-dark";
-
-
 const ROLE_DESCRIPTIONS = {
 
   murderer:
@@ -626,19 +609,53 @@ const ROLE_DESCRIPTIONS = {
 };
 
 
+/*
+  IMPORTANT:
+
+  We deliberately use PeerJS's normal cloud configuration here.
+
+  Do NOT add a fake/custom TURN server.
+  Do NOT use the room code as the PeerJS ID.
+*/
+
+const PEER_OPTIONS = {
+
+  debug: 3,
+
+  secure: true,
+
+  config: {
+
+    iceServers: [
+
+      {
+        urls: "stun:stun.l.google.com:19302"
+      },
+
+      {
+        urls: "stun:stun1.l.google.com:19302"
+      }
+
+    ],
+
+    sdpSemantics: "unified-plan"
+
+  }
+
+};
+
+
 /* ============================================================
    VIEWS
 ============================================================ */
 
 const views = [
-
   "landing-view",
   "join-view",
   "host-lobby-view",
   "host-game-view",
   "player-view",
   "game-over-view"
-
 ];
 
 
@@ -646,15 +663,21 @@ function showView(id) {
 
   views.forEach(view => {
 
-    document
-      .getElementById(view)
-      ?.classList.add("hidden");
+    const element =
+      document.getElementById(view);
+
+    if (element) {
+      element.classList.add("hidden");
+    }
 
   });
 
-  document
-    .getElementById(id)
-    ?.classList.remove("hidden");
+  const target =
+    document.getElementById(id);
+
+  if (target) {
+    target.classList.remove("hidden");
+  }
 
   lucide.createIcons();
 
@@ -674,12 +697,11 @@ function generateRoomCode() {
 
   for (let i = 0; i < 4; i++) {
 
-    code +=
-      chars[
-        Math.floor(
-          Math.random() * chars.length
-        )
-      ];
+    code += chars[
+      Math.floor(
+        Math.random() * chars.length
+      )
+    ];
 
   }
 
@@ -691,20 +713,6 @@ function generateRoomCode() {
 /* ============================================================
    JOIN URL
 ============================================================ */
-
-/*
-   IMPORTANT:
-
-   The QR code contains BOTH:
-
-   room = ABCD
-   host = RANDOM PEER ID
-
-   This means the phone knows exactly which PeerJS host to connect
-   to.
-
-   No local IP address is used.
-*/
 
 function getJoinURL(roomCode, hostPeerId) {
 
@@ -719,10 +727,14 @@ function getJoinURL(roomCode, hostPeerId) {
     roomCode.toUpperCase()
   );
 
-  url.searchParams.set(
-    "host",
-    hostPeerId
-  );
+  if (hostPeerId) {
+
+    url.searchParams.set(
+      "host",
+      hostPeerId
+    );
+
+  }
 
   return url.toString();
 
@@ -753,207 +765,185 @@ class NetworkEngine {
 
 
   /* ==========================================================
-     HOST INITIALIZATION
+     CREATE PEER
+  ========================================================== */
+
+  createPeer() {
+
+    /*
+      IMPORTANT:
+
+      No ID is supplied.
+
+      PeerJS creates a random ID.
+    */
+
+    return new Peer(
+      undefined,
+      PEER_OPTIONS
+    );
+
+  }
+
+
+  /* ==========================================================
+     HOST
   ========================================================== */
 
   initHost(callback) {
+
+    this.destroy();
 
     this.isHost = true;
 
     this.onData = callback;
 
+    return new Promise(
+      (resolve, reject) => {
 
-    return new Promise((resolve, reject) => {
+        let finished = false;
 
-      let settled = false;
+        const peer =
+          this.createPeer();
 
-
-      try {
-
-        /*
-          IMPORTANT:
-
-          Do NOT manually specify a PeerJS ID.
-
-          PeerJS generates a random unique ID for this host.
-        */
-
-        this.peer = new Peer(undefined, {
-
-          debug: 2,
-
-          secure: true,
-
-          host: "0.peerjs.com",
-
-          port: 443,
-
-          path: "/",
-
-          config: {
-
-            iceServers: [
-
-              {
-                urls:
-                  "stun:stun.l.google.com:19302"
-              }
-
-            ]
-
-          }
-
-        });
+        this.peer =
+          peer;
 
 
-        this.peer.on("open", id => {
+        peer.on(
+          "open",
+          id => {
 
-          console.log(
-            "HOST PEER ID:",
-            id
-          );
-
-          this.hostPeerId = id;
-
-          const status =
-            document.getElementById(
-              "host-connection-status"
+            console.log(
+              "[HOST] Peer opened:",
+              id
             );
 
-          if (status) {
+            this.hostPeerId =
+              id;
 
-            status.textContent =
-              "✓ Host connected — ready for players";
+            const status =
+              document.getElementById(
+                "host-connection-status"
+              );
 
-            status.className =
-              "text-green-400 text-xs mt-4";
+            if (status) {
 
-          }
+              status.textContent =
+                "✓ Host ready — scan the QR code";
 
-
-          if (!settled) {
-
-            settled = true;
-
-            resolve(id);
-
-          }
-
-        });
-
-
-        this.peer.on("connection", conn => {
-
-          console.log(
-            "Incoming player connection:",
-            conn.peer
-          );
-
-          this.setupHostConnection(conn);
-
-        });
-
-
-        this.peer.on("error", error => {
-
-          console.error(
-            "HOST PEER ERROR:",
-            error
-          );
-
-
-          const status =
-            document.getElementById(
-              "host-connection-status"
-            );
-
-
-          if (status) {
-
-            status.textContent =
-              "Host error: " +
-              (error.message || error.type);
-
-            status.className =
-              "text-red-400 text-xs mt-4";
-
-          }
-
-
-          if (!settled) {
-
-            settled = true;
-
-            reject(
-              new Error(
-                this.getPeerErrorMessage(error)
-              )
-            );
-
-          }
-
-        });
-
-
-        this.peer.on("disconnected", () => {
-
-          console.warn(
-            "Host disconnected from PeerJS."
-          );
-
-
-          const status =
-            document.getElementById(
-              "host-connection-status"
-            );
-
-
-          if (status) {
-
-            status.textContent =
-              "Reconnecting to PeerJS...";
-
-            status.className =
-              "text-yellow-400 text-xs mt-4";
-
-          }
-
-
-          try {
-
-            if (
-              this.peer &&
-              !this.peer.destroyed
-            ) {
-
-              this.peer.reconnect();
+              status.className =
+                "text-green-400 text-xs mt-4";
 
             }
 
-          } catch (error) {
+            if (!finished) {
 
-            console.error(error);
+              finished = true;
+
+              resolve(id);
+
+            }
 
           }
+        );
 
-        });
+
+        peer.on(
+          "connection",
+          conn => {
+
+            console.log(
+              "[HOST] Incoming connection:",
+              conn.peer
+            );
+
+            this.setupHostConnection(
+              conn
+            );
+
+          }
+        );
 
 
-        this.peer.on("close", () => {
+        peer.on(
+          "disconnected",
+          () => {
 
-          console.warn(
-            "Host Peer closed."
-          );
+            console.warn(
+              "[HOST] PeerJS disconnected"
+            );
 
-        });
+            if (
+              !peer.destroyed &&
+              peer.disconnected
+            ) {
 
-      } catch (error) {
+              setTimeout(
+                () => {
 
-        reject(error);
+                  try {
+                    peer.reconnect();
+                  } catch (error) {
+                    console.error(error);
+                  }
+
+                },
+                1000
+              );
+
+            }
+
+          }
+        );
+
+
+        peer.on(
+          "error",
+          error => {
+
+            console.error(
+              "[HOST] PeerJS error:",
+              error
+            );
+
+            const status =
+              document.getElementById(
+                "host-connection-status"
+              );
+
+            if (status) {
+
+              status.textContent =
+                "Connection error: " +
+                this.getPeerErrorMessage(
+                  error
+                );
+
+              status.className =
+                "text-red-400 text-xs mt-4";
+
+            }
+
+            if (!finished) {
+
+              finished = true;
+
+              reject(
+                new Error(
+                  this.getPeerErrorMessage(
+                    error
+                  )
+                )
+              );
+
+            }
+
+          }
+        );
 
       }
-
-    });
+    );
 
   }
 
@@ -964,74 +954,86 @@ class NetworkEngine {
 
   setupHostConnection(conn) {
 
-    conn.on("open", () => {
+    conn.on(
+      "open",
+      () => {
 
-      console.log(
-        "PLAYER CONNECTED:",
-        conn.peer
-      );
+        console.log(
+          "[HOST] Data connection open:",
+          conn.peer
+        );
 
-      this.connections.set(
-        conn.peer,
-        conn
-      );
-
-    });
-
-
-    conn.on("data", data => {
-
-      console.log(
-        "HOST RECEIVED:",
-        data
-      );
-
-      if (this.onData) {
-
-        this.onData(
-          data,
+        this.connections.set(
+          conn.peer,
           conn
         );
 
       }
-
-    });
-
-
-    conn.on("close", () => {
-
-      console.log(
-        "PLAYER DISCONNECTED:",
-        conn.peer
-      );
-
-      this.connections.delete(
-        conn.peer
-      );
-
-      renderHostRoster();
-
-    });
+    );
 
 
-    conn.on("error", error => {
+    conn.on(
+      "data",
+      data => {
 
-      console.error(
-        "PLAYER CONNECTION ERROR:",
-        error
-      );
+        console.log(
+          "[HOST] Received:",
+          data
+        );
 
-      this.connections.delete(
-        conn.peer
-      );
+        if (this.onData) {
 
-    });
+          this.onData(
+            data,
+            conn
+          );
+
+        }
+
+      }
+    );
+
+
+    conn.on(
+      "close",
+      () => {
+
+        console.log(
+          "[HOST] Player connection closed:",
+          conn.peer
+        );
+
+        this.connections.delete(
+          conn.peer
+        );
+
+        renderHostRoster();
+
+      }
+    );
+
+
+    conn.on(
+      "error",
+      error => {
+
+        console.error(
+          "[HOST] Data connection error:",
+          error
+        );
+
+        this.connections.delete(
+          conn.peer
+        );
+
+      }
+    );
 
   }
 
 
   /* ==========================================================
-     CLIENT INITIALIZATION
+     CLIENT
   ========================================================== */
 
   initClient(
@@ -1042,105 +1044,87 @@ class NetworkEngine {
     callback
   ) {
 
+    this.destroy();
+
     this.isHost = false;
 
     this.onData = callback;
 
-    this.hostPeerId = hostPeerId;
+    this.hostPeerId =
+      hostPeerId;
 
 
-    return new Promise((resolve, reject) => {
+    return new Promise(
+      (resolve, reject) => {
 
-      let settled = false;
+        let finished = false;
 
-      let connectionTimeout;
+        let timeout = null;
+
+        const peer =
+          this.createPeer();
+
+        this.peer =
+          peer;
 
 
-      try {
+        const fail = message => {
 
-        /*
-          The CLIENT also receives a random PeerJS ID.
-        */
-
-        this.peer = new Peer(undefined, {
-
-          debug: 2,
-
-          secure: true,
-
-          host: "0.peerjs.com",
-
-          port: 443,
-
-          path: "/",
-
-          config: {
-
-            iceServers: [
-
-              {
-                urls:
-                  "stun:stun.l.google.com:19302"
-              }
-
-            ]
-
+          if (finished) {
+            return;
           }
 
-        });
+          finished = true;
+
+          if (timeout) {
+            clearTimeout(timeout);
+          }
+
+          reject(
+            new Error(message)
+          );
+
+        };
 
 
-        connectionTimeout =
-          setTimeout(() => {
+        /*
+          Give PeerJS enough time to establish
+          its signaling connection.
+        */
 
-            if (!settled) {
+        timeout =
+          setTimeout(
+            () => {
 
-              settled = true;
-
-              reject(
-                new Error(
-                  "Connection timed out. Make sure the host still has the game open."
-                )
+              fail(
+                "The host did not respond. Make sure the host still has the game open, then create a NEW QR code and try again."
               );
 
-            }
+            },
+            25000
+          );
 
-          }, 15000);
 
-
-        this.peer.on(
+        peer.on(
           "open",
           clientPeerId => {
 
             console.log(
-              "CLIENT PEER ID:",
+              "[CLIENT] Peer opened:",
               clientPeerId
             );
 
-
             console.log(
-              "CONNECTING TO HOST:",
-              this.hostPeerId
+              "[CLIENT] Target host:",
+              hostPeerId
             );
 
 
-            if (!this.hostPeerId) {
+            if (!hostPeerId) {
 
-              clearTimeout(
-                connectionTimeout
+              fail(
+                "This QR code does not contain the host connection ID. Create a new game and scan the new QR code."
               );
-
-              if (!settled) {
-
-                settled = true;
-
-                reject(
-                  new Error(
-                    "This QR code is missing the host connection information. Create a new game and scan its new QR code."
-                  )
-                );
-
-              }
 
               return;
 
@@ -1148,10 +1132,11 @@ class NetworkEngine {
 
 
             const conn =
-              this.peer.connect(
-                this.hostPeerId,
+              peer.connect(
+                hostPeerId,
                 {
-                  reliable: true
+                  reliable: true,
+                  serialization: "json"
                 }
               );
 
@@ -1160,274 +1145,265 @@ class NetworkEngine {
               conn;
 
 
-            conn.on("open", () => {
-
-              console.log(
-                "CONNECTED TO HOST!"
-              );
+            let connectionOpened =
+              false;
 
 
-              clearTimeout(
-                connectionTimeout
-              );
+            conn.on(
+              "open",
+              () => {
+
+                connectionOpened =
+                  true;
+
+                console.log(
+                  "[CLIENT] DATA CHANNEL OPEN"
+                );
 
 
-              conn.send({
-
-                type:
-                  "JOIN_REQUEST",
-
-                playerId,
-
-                name:
-                  playerName,
-
-                peerId:
-                  clientPeerId
-
-              });
+                if (timeout) {
+                  clearTimeout(timeout);
+                }
 
 
-              if (!settled) {
+                conn.send({
 
-                settled = true;
+                  type:
+                    "JOIN_REQUEST",
 
-                resolve(conn);
+                  playerId,
 
-              }
+                  name:
+                    playerName,
 
-            });
+                  peerId:
+                    clientPeerId
 
-
-            conn.on("data", data => {
-
-              console.log(
-                "CLIENT RECEIVED:",
-                data
-              );
+                });
 
 
-              if (this.onData) {
+                if (!finished) {
 
-                this.onData(data);
+                  finished = true;
+
+                  resolve(conn);
+
+                }
 
               }
-
-            });
-
-
-            conn.on("close", () => {
-
-              console.warn(
-                "Connection to host closed."
-              );
+            );
 
 
-              if (
-                document
-                  .getElementById(
-                    "join-view"
-                  )
-                  ?.classList
-                  .contains("hidden")
-              ) {
+            conn.on(
+              "data",
+              data => {
 
-                return;
+                console.log(
+                  "[CLIENT] Received:",
+                  data
+                );
+
+                if (this.onData) {
+
+                  this.onData(data);
+
+                }
 
               }
+            );
 
 
-              showJoinStatus(
-                "The host connection was closed.",
-                false
-              );
+            conn.on(
+              "error",
+              error => {
 
-            });
-
-
-            conn.on("error", error => {
-
-              console.error(
-                "CLIENT CONNECTION ERROR:",
-                error
-              );
+                console.error(
+                  "[CLIENT] Data connection error:",
+                  error
+                );
 
 
-              clearTimeout(
-                connectionTimeout
-              );
+                if (!connectionOpened) {
+
+                  fail(
+                    this.getPeerErrorMessage(
+                      error
+                    )
+                  );
+
+                }
+
+              }
+            );
 
 
-              if (!settled) {
+            conn.on(
+              "close",
+              () => {
 
-                settled = true;
+                console.warn(
+                  "[CLIENT] Host connection closed"
+                );
 
-                reject(
-                  new Error(
-                    this.getPeerErrorMessage(error)
-                  )
+                if (
+                  document
+                    .getElementById(
+                      "player-view"
+                    )
+                    ?.classList
+                    .contains("hidden")
+                ) {
+
+                  return;
+
+                }
+
+                showJoinStatus(
+                  "The host connection was closed.",
+                  false
                 );
 
               }
-
-            });
+            );
 
           }
         );
 
 
-        this.peer.on(
+        peer.on(
           "error",
           error => {
 
             console.error(
-              "CLIENT PEER ERROR:",
+              "[CLIENT] PeerJS error:",
               error
             );
 
-
-            clearTimeout(
-              connectionTimeout
+            fail(
+              this.getPeerErrorMessage(
+                error
+              )
             );
-
-
-            if (!settled) {
-
-              settled = true;
-
-              reject(
-                new Error(
-                  this.getPeerErrorMessage(error)
-                )
-              );
-
-            }
 
           }
         );
 
 
-        this.peer.on(
+        peer.on(
           "disconnected",
           () => {
 
             console.warn(
-              "CLIENT DISCONNECTED FROM PEERJS"
+              "[CLIENT] Disconnected from PeerJS signaling server"
             );
 
+            if (
+              !peer.destroyed &&
+              peer.disconnected
+            ) {
 
-            try {
-
-              if (
-                this.peer &&
-                !this.peer.destroyed
-              ) {
-
-                this.peer.reconnect();
-
+              try {
+                peer.reconnect();
+              } catch (error) {
+                console.error(error);
               }
-
-            } catch (error) {
-
-              console.error(error);
 
             }
 
           }
         );
 
-      } catch (error) {
-
-        clearTimeout(
-          connectionTimeout
-        );
-
-        reject(error);
-
       }
-
-    });
+    );
 
   }
 
 
   /* ==========================================================
-     PEER ERROR MESSAGE
+     ERROR MESSAGES
   ========================================================== */
 
   getPeerErrorMessage(error) {
 
     if (!error) {
-
       return "Unknown connection error.";
-
     }
 
 
-    const type =
-      error.type || "";
-
-
-    if (
-      type === "peer-unavailable"
-    ) {
-
-      return (
-        "The host could not be found. " +
-        "Make sure the host has the game open and use the NEW QR code."
-      );
-
-    }
-
-
-    if (
-      type === "network"
-    ) {
-
-      return (
-        "Network error. Check that this device has internet access."
-      );
-
-    }
-
-
-    if (
-      type === "browser-incompatible"
-    ) {
-
-      return (
-        "This browser does not support the connection required for the game."
-      );
-
-    }
-
-
-    if (
-      type === "ssl-unavailable"
-    ) {
-
-      return (
-        "Secure connection unavailable. Open the game using HTTPS."
-      );
-
-    }
-
-
-    if (
-      type === "server-error"
-    ) {
-
-      return (
-        "The PeerJS connection server returned an error. Try again."
-      );
-
-    }
-
-
-    return (
-      error.message ||
-      `PeerJS error: ${type || "unknown"}`
+    console.error(
+      "PeerJS error type:",
+      error.type
     );
+
+
+    switch (
+      error.type
+    ) {
+
+      case "peer-unavailable":
+
+        return (
+          "Host not found. Make sure the host game is still open and scan the newest QR code."
+        );
+
+
+      case "network":
+
+        return (
+          "PeerJS could not reach its connection server. Check the internet connection on both devices."
+        );
+
+
+      case "server-error":
+
+        return (
+          "PeerJS server error. Please try creating a new game."
+        );
+
+
+      case "socket-error":
+
+        return (
+          "The PeerJS connection was interrupted."
+        );
+
+
+      case "socket-closed":
+
+        return (
+          "The PeerJS connection closed unexpectedly."
+        );
+
+
+      case "browser-incompatible":
+
+        return (
+          "This browser does not support the required WebRTC connection."
+        );
+
+
+      case "webrtc":
+
+        return (
+          "WebRTC could not establish the device-to-device connection."
+        );
+
+
+      case "ssl-unavailable":
+
+        return (
+          "Secure connection failed. Make sure the game is opened using HTTPS."
+        );
+
+
+      default:
+
+        return (
+          error.message ||
+          `PeerJS error: ${error.type || "unknown"}`
+        );
+
+    }
 
   }
 
@@ -1443,7 +1419,10 @@ class NetworkEngine {
 
         try {
 
-          if (conn && conn.open) {
+          if (
+            conn &&
+            conn.open
+          ) {
 
             conn.send(data);
 
@@ -1452,7 +1431,7 @@ class NetworkEngine {
         } catch (error) {
 
           console.error(
-            "Broadcast error:",
+            "[HOST] Broadcast error:",
             error
           );
 
@@ -1465,19 +1444,24 @@ class NetworkEngine {
 
 
   /* ==========================================================
-     SEND TO
+     SEND
   ========================================================== */
 
   sendTo(peerId, data) {
 
     const conn =
-      this.connections.get(peerId);
+      this.connections.get(
+        peerId
+      );
 
 
-    if (!conn) {
+    if (
+      !conn ||
+      !conn.open
+    ) {
 
       console.warn(
-        "No connection for:",
+        "[HOST] Connection unavailable:",
         peerId
       );
 
@@ -1488,25 +1472,20 @@ class NetworkEngine {
 
     try {
 
-      if (conn.open) {
+      conn.send(data);
 
-        conn.send(data);
-
-        return true;
-
-      }
+      return true;
 
     } catch (error) {
 
       console.error(
-        "Send error:",
+        "[HOST] Send error:",
         error
       );
 
+      return false;
+
     }
-
-
-    return false;
 
   }
 
@@ -1523,14 +1502,11 @@ class NetworkEngine {
         conn => {
 
           try {
-
             conn.close();
-
           } catch {}
 
         }
       );
-
 
       this.connections.clear();
 
@@ -1538,9 +1514,7 @@ class NetworkEngine {
       if (this.clientConnection) {
 
         try {
-
           this.clientConnection.close();
-
         } catch {}
 
       }
@@ -1549,25 +1523,29 @@ class NetworkEngine {
       if (this.peer) {
 
         try {
-
           this.peer.destroy();
-
         } catch {}
 
       }
 
     } catch (error) {
 
-      console.error(error);
+      console.error(
+        "Network cleanup error:",
+        error
+      );
 
     }
 
 
-    this.peer = null;
+    this.peer =
+      null;
 
-    this.clientConnection = null;
+    this.clientConnection =
+      null;
 
-    this.hostPeerId = null;
+    this.hostPeerId =
+      null;
 
   }
 
@@ -1579,7 +1557,7 @@ const net =
 
 
 /* ============================================================
-   HOST GAME STATE
+   HOST STATE
 ============================================================ */
 
 let hostState = {
@@ -1640,15 +1618,11 @@ let localPlayer = {
 };
 
 
-/* ============================================================
-   CURRENT PLAYER LIST
-============================================================ */
-
 let currentPlayers = [];
 
 
 /* ============================================================
-   PERSISTENT PLAYER ID
+   PLAYER ID
 ============================================================ */
 
 function getPersistentPlayerId() {
@@ -1656,9 +1630,10 @@ function getPersistentPlayerId() {
   const key =
     "whispers-dark-player-id";
 
-
   let id =
-    localStorage.getItem(key);
+    localStorage.getItem(
+      key
+    );
 
 
   if (!id) {
@@ -1700,6 +1675,11 @@ function showJoinStatus(
     );
 
 
+  if (!box) {
+    return;
+  }
+
+
   box.classList.remove(
     "hidden"
   );
@@ -1725,6 +1705,9 @@ function showJoinStatus(
 ============================================================ */
 
 async function createGame() {
+
+  net.destroy();
+
 
   const roomCode =
     generateRoomCode();
@@ -1771,38 +1754,29 @@ async function createGame() {
     roomCode;
 
 
-  /*
-    IMPORTANT:
-
-    Start PeerJS FIRST.
-
-    Only after we receive the random host Peer ID do we create
-    the QR code.
-  */
-
   showView(
     "host-lobby-view"
   );
 
 
-  const qrContainer =
+  const qr =
     document.getElementById(
       "qrcode"
     );
 
 
-  qrContainer.innerHTML = `
+  qr.innerHTML = `
 
     <div class="w-[220px] h-[220px] flex items-center justify-center text-black text-sm text-center">
 
       <div>
 
         <div class="animate-pulse font-bold">
-          Starting host...
+          Connecting...
         </div>
 
         <div class="text-xs mt-2 text-zinc-500">
-          Please wait
+          Starting secure game connection
         </div>
 
       </div>
@@ -1820,10 +1794,6 @@ async function createGame() {
       );
 
 
-    /*
-      NOW we know the exact host PeerJS ID.
-    */
-
     const joinURL =
       getJoinURL(
         roomCode,
@@ -1832,16 +1802,12 @@ async function createGame() {
 
 
     console.log(
-      "================================="
-    );
-
-    console.log(
       "ROOM:",
       roomCode
     );
 
     console.log(
-      "HOST PEER ID:",
+      "HOST PEER:",
       hostPeerId
     );
 
@@ -1850,17 +1816,13 @@ async function createGame() {
       joinURL
     );
 
-    console.log(
-      "================================="
-    );
 
-
-    qrContainer.innerHTML =
+    qr.innerHTML =
       "";
 
 
     new QRCode(
-      qrContainer,
+      qr,
       {
 
         text:
@@ -1891,14 +1853,14 @@ async function createGame() {
   } catch (error) {
 
     console.error(
-      "CREATE GAME ERROR:",
+      "HOST START ERROR:",
       error
     );
 
 
     alert(
       error.message ||
-      "Could not create the game."
+      "Could not start the game."
     );
 
 
@@ -1914,7 +1876,7 @@ async function createGame() {
 
 
 /* ============================================================
-   HOST RECEIVES ALL DATA
+   HOST DATA
 ============================================================ */
 
 function handleHostReceivedData(
@@ -1932,28 +1894,25 @@ function handleHostReceivedData(
   }
 
 
-  /* ==========================================================
-     PLAYER JOIN
-  ========================================================== */
+  /* JOIN */
 
   if (
-    data.type === "JOIN_REQUEST"
+    data.type ===
+    "JOIN_REQUEST"
   ) {
 
     if (
-      hostState.phase !== "LOBBY"
+      hostState.phase !==
+      "LOBBY"
     ) {
 
       net.sendTo(
         conn.peer,
         {
-
           type:
             "JOIN_ERROR",
-
           message:
             "The game has already started."
-
         }
       );
 
@@ -1978,15 +1937,9 @@ function handleHostReceivedData(
 
 
     if (!playerId) {
-
       return;
-
     }
 
-
-    /*
-      Check if this player already exists.
-    */
 
     const existing =
       Object.values(
@@ -2015,13 +1968,10 @@ function handleHostReceivedData(
       net.sendTo(
         conn.peer,
         {
-
           type:
             "JOIN_SUCCESS",
-
           playerId:
             existing.id
-
         }
       );
 
@@ -2072,12 +2022,9 @@ function handleHostReceivedData(
     net.sendTo(
       conn.peer,
       {
-
         type:
           "JOIN_SUCCESS",
-
         playerId
-
       }
     );
 
@@ -2094,12 +2041,11 @@ function handleHostReceivedData(
   }
 
 
-  /* ==========================================================
-     REQUEST PLAYER LIST
-  ========================================================== */
+  /* REQUEST PLAYERS */
 
   if (
-    data.type === "REQUEST_PLAYERS"
+    data.type ===
+    "REQUEST_PLAYERS"
   ) {
 
     sendCurrentPlayers(
@@ -2111,36 +2057,36 @@ function handleHostReceivedData(
   }
 
 
-  /* ==========================================================
-     NIGHT ACTION
-  ========================================================== */
+  /* NIGHT */
 
   if (
-    data.type === "NIGHT_ACTION"
+    data.type ===
+    "NIGHT_ACTION"
   ) {
+
+    if (
+      hostState.phase !==
+      "NIGHT"
+    ) {
+      return;
+    }
+
 
     const player =
       Object.values(
         hostState.players
       ).find(
         p =>
-          p.peerId === conn.peer
+          p.peerId ===
+          conn.peer
       );
 
 
-    if (!player || !player.alive) {
-
-      return;
-
-    }
-
-
     if (
-      hostState.phase !== "NIGHT"
+      !player ||
+      !player.alive
     ) {
-
       return;
-
     }
 
 
@@ -2154,41 +2100,45 @@ function handleHostReceivedData(
       !target ||
       !target.alive
     ) {
-
       return;
-
     }
 
 
     if (
-      data.action === "murder" &&
-      player.role === "murderer"
+      data.action ===
+      "murder" &&
+      player.role ===
+      "murderer"
     ) {
 
       hostState.murdererTarget =
-        data.targetId;
+        target.id;
 
     }
 
 
     if (
-      data.action === "protect" &&
-      player.role === "doctor"
+      data.action ===
+      "protect" &&
+      player.role ===
+      "doctor"
     ) {
 
       hostState.doctorTarget =
-        data.targetId;
+        target.id;
 
     }
 
 
     if (
-      data.action === "investigate" &&
-      player.role === "detective"
+      data.action ===
+      "investigate" &&
+      player.role ===
+      "detective"
     ) {
 
       hostState.detectiveTarget =
-        data.targetId;
+        target.id;
 
 
       net.sendTo(
@@ -2202,7 +2152,8 @@ function handleHostReceivedData(
             target.name,
 
           isMurderer:
-            target.role === "murderer"
+            target.role ===
+            "murderer"
 
         }
       );
@@ -2215,20 +2166,28 @@ function handleHostReceivedData(
   }
 
 
-  /* ==========================================================
-     VOTE
-  ========================================================== */
+  /* VOTE */
 
   if (
-    data.type === "VOTE"
+    data.type ===
+    "VOTE"
   ) {
+
+    if (
+      hostState.phase !==
+      "DAY_VOTE"
+    ) {
+      return;
+    }
+
 
     const player =
       Object.values(
         hostState.players
       ).find(
         p =>
-          p.peerId === conn.peer
+          p.peerId ===
+          conn.peer
       );
 
 
@@ -2236,18 +2195,7 @@ function handleHostReceivedData(
       !player ||
       !player.alive
     ) {
-
       return;
-
-    }
-
-
-    if (
-      hostState.phase !== "DAY_VOTE"
-    ) {
-
-      return;
-
     }
 
 
@@ -2260,11 +2208,10 @@ function handleHostReceivedData(
     if (
       !target ||
       !target.alive ||
-      target.id === player.id
+      target.id ===
+      player.id
     ) {
-
       return;
-
     }
 
 
@@ -2274,15 +2221,13 @@ function handleHostReceivedData(
 
     renderHostGame();
 
-    return;
-
   }
 
 }
 
 
 /* ============================================================
-   SEND CURRENT PLAYERS
+   PLAYER LIST
 ============================================================ */
 
 function sendCurrentPlayers(
@@ -2293,9 +2238,7 @@ function sendCurrentPlayers(
     !conn ||
     !conn.open
   ) {
-
     return;
-
   }
 
 
@@ -2303,18 +2246,20 @@ function sendCurrentPlayers(
     Object.values(
       hostState.players
     )
-      .map(player => ({
+      .map(
+        player => ({
 
-        id:
-          player.id,
+          id:
+            player.id,
 
-        name:
-          player.name,
+          name:
+            player.name,
 
-        alive:
-          player.alive
+          alive:
+            player.alive
 
-      }));
+        })
+      );
 
 
   try {
@@ -2331,7 +2276,6 @@ function sendCurrentPlayers(
   } catch (error) {
 
     console.error(
-      "PLAYER LIST SEND ERROR:",
       error
     );
 
@@ -2351,12 +2295,10 @@ function renderHostRoster() {
       "host-roster"
     );
 
-
   const empty =
     document.getElementById(
       "host-empty"
     );
-
 
   const count =
     document.getElementById(
@@ -2402,50 +2344,38 @@ function renderHostRoster() {
   roster.innerHTML =
     players
       .map(
-        (player, index) => {
+        (player, index) => `
 
-          return `
+          <div class="flex items-center justify-between rounded-2xl bg-black/30 border border-zinc-800 p-4 fade-in">
 
-            <div class="flex items-center justify-between rounded-2xl bg-black/30 border border-zinc-800 p-4 fade-in">
+            <div class="flex items-center gap-4">
 
-              <div class="flex items-center gap-4">
+              <div class="w-10 h-10 rounded-full bg-red-950/50 flex items-center justify-center font-black text-red-400">
+                ${index + 1}
+              </div>
 
-                <div class="w-10 h-10 rounded-full bg-red-950/50 flex items-center justify-center font-black text-red-400">
+              <div>
 
-                  ${index + 1}
+                <p class="font-bold">
+                  ${escapeHTML(player.name)}
+                </p>
 
-                </div>
-
-                <div>
-
-                  <p class="font-bold">
-
-                    ${escapeHTML(
-                      player.name
-                    )}
-
-                  </p>
-
-                  <p class="text-xs text-green-500">
-
-                    Connected
-
-                  </p>
-
-                </div>
+                <p class="text-xs text-green-500">
+                  Connected
+                </p>
 
               </div>
 
-              <i
-                data-lucide="wifi"
-                class="w-4 h-4 text-green-500"
-              ></i>
-
             </div>
 
-          `;
+            <i
+              data-lucide="wifi"
+              class="w-4 h-4 text-green-500"
+            ></i>
 
-        }
+          </div>
+
+        `
       )
       .join("");
 
@@ -2480,7 +2410,7 @@ function startGame() {
   }
 
 
-  let murdererCount =
+  const murdererCount =
     players.length <= 5
       ? 1
       : 2;
@@ -2500,10 +2430,6 @@ function startGame() {
   };
 
 
-  /*
-    Shuffle players.
-  */
-
   const shuffled =
     [...players].sort(
       () =>
@@ -2511,13 +2437,9 @@ function startGame() {
     );
 
 
-  let roleIndex =
+  let index =
     0;
 
-
-  /*
-    Murderers.
-  */
 
   for (
     let i = 0;
@@ -2525,54 +2447,30 @@ function startGame() {
     i++
   ) {
 
-    shuffled[
-      roleIndex++
-    ].role =
+    shuffled[index++].role =
       "murderer";
 
   }
 
 
-  /*
-    Detective.
-  */
-
-  shuffled[
-    roleIndex++
-  ].role =
+  shuffled[index++].role =
     "detective";
 
 
-  /*
-    Doctor.
-  */
-
-  shuffled[
-    roleIndex++
-  ].role =
+  shuffled[index++].role =
     "doctor";
 
 
-  /*
-    Innocents.
-  */
-
   while (
-    roleIndex <
+    index <
     shuffled.length
   ) {
 
-    shuffled[
-      roleIndex++
-    ].role =
+    shuffled[index++].role =
       "innocent";
 
   }
 
-
-  /*
-    Reset state.
-  */
 
   hostState.murdererTarget =
     null;
@@ -2583,10 +2481,6 @@ function startGame() {
   hostState.detectiveTarget =
     null;
 
-
-  /*
-    Send private roles.
-  */
 
   players.forEach(
     player => {
@@ -2624,17 +2518,24 @@ function startGame() {
 
   renderHostGame();
 
-  broadcastPhase();
+
+  /*
+    START TIMER BEFORE broadcasting
+    so players receive the actual timer.
+  */
 
   startHostTimer(
     45
   );
 
+
+  broadcastPhase();
+
 }
 
 
 /* ============================================================
-   BROADCAST PHASE
+   PHASE
 ============================================================ */
 
 function broadcastPhase() {
@@ -2685,7 +2586,8 @@ function startHostTimer(
 
 
         if (
-          hostState.timerSeconds <= 0
+          hostState.timerSeconds <=
+          0
         ) {
 
           clearInterval(
@@ -2707,7 +2609,7 @@ function startHostTimer(
 
 
 /* ============================================================
-   UPDATE TIMERS
+   TIMERS
 ============================================================ */
 
 function updateTimers() {
@@ -2720,16 +2622,26 @@ function updateTimers() {
       : "--";
 
 
-  document.getElementById(
-    "host-timer"
-  ).textContent =
-    value;
+  const host =
+    document.getElementById(
+      "host-timer"
+    );
+
+  const player =
+    document.getElementById(
+      "player-timer"
+    );
 
 
-  document.getElementById(
-    "player-timer"
-  ).textContent =
-    value;
+  if (host) {
+    host.textContent =
+      value;
+  }
+
+  if (player) {
+    player.textContent =
+      value;
+  }
 
 }
 
@@ -2748,15 +2660,15 @@ function formatTime(
     seconds % 60;
 
 
-  return `${mins}:${String(
-    secs
-  ).padStart(2, "0")}`;
+  return (
+    `${mins}:${String(secs).padStart(2, "0")}`
+  );
 
 }
 
 
 /* ============================================================
-   ADVANCE PHASE
+   ADVANCE
 ============================================================ */
 
 function advancePhase() {
@@ -2767,7 +2679,8 @@ function advancePhase() {
 
 
   if (
-    hostState.phase === "NIGHT"
+    hostState.phase ===
+    "NIGHT"
   ) {
 
     resolveNight();
@@ -2778,7 +2691,8 @@ function advancePhase() {
 
 
   if (
-    hostState.phase === "DAY_VOTE"
+    hostState.phase ===
+    "DAY_VOTE"
   ) {
 
     resolveVote();
@@ -2791,7 +2705,7 @@ function advancePhase() {
 
 
 /* ============================================================
-   RESOLVE NIGHT
+   NIGHT RESULT
 ============================================================ */
 
 function resolveNight() {
@@ -2810,7 +2724,8 @@ function resolveNight() {
 
   if (
     killedPlayerId &&
-    killedPlayerId !== savedPlayerId
+    killedPlayerId !==
+    savedPlayerId
   ) {
 
     killed =
@@ -2827,50 +2742,6 @@ function resolveNight() {
     }
 
   }
-
-
-  /*
-    Check if the game is already over.
-  */
-
-  const winner =
-    checkWinner();
-
-
-  if (winner) {
-
-    net.broadcast({
-
-      type:
-        "NIGHT_RESULT",
-
-      killedPlayerId:
-        killed
-          ? killed.id
-          : null,
-
-      killedName:
-        killed
-          ? killed.name
-          : null
-
-    });
-
-
-    endGame(
-      winner
-    );
-
-    return;
-
-  }
-
-
-  hostState.phase =
-    "DAY_REVEAL";
-
-
-  renderHostGame();
 
 
   net.broadcast({
@@ -2891,6 +2762,28 @@ function resolveNight() {
   });
 
 
+  const winner =
+    checkWinner();
+
+
+  if (winner) {
+
+    endGame(
+      winner
+    );
+
+    return;
+
+  }
+
+
+  hostState.phase =
+    "DAY_REVEAL";
+
+
+  renderHostGame();
+
+
   broadcastPhase();
 
 }
@@ -2904,10 +2797,6 @@ function openVoting() {
 
   hostState.phase =
     "DAY_VOTE";
-
-
-  hostState.votes =
-    {};
 
 
   Object.values(
@@ -2925,11 +2814,13 @@ function openVoting() {
 
   renderHostGame();
 
-  broadcastPhase();
 
   startHostTimer(
     60
   );
+
+
+  broadcastPhase();
 
 }
 
@@ -2973,10 +2864,8 @@ function resolveVote() {
   let eliminatedId =
     null;
 
-
   let highest =
     0;
-
 
   let tied =
     false;
@@ -3109,17 +2998,19 @@ function resolveVote() {
 
   renderHostGame();
 
-  broadcastPhase();
 
   startHostTimer(
     45
   );
 
+
+  broadcastPhase();
+
 }
 
 
 /* ============================================================
-   WIN CONDITION
+   WINNER
 ============================================================ */
 
 function checkWinner() {
@@ -3133,7 +3024,8 @@ function checkWinner() {
   const murderers =
     players.filter(
       p =>
-        p.role === "murderer" &&
+        p.role ===
+        "murderer" &&
         p.alive
     ).length;
 
@@ -3141,7 +3033,8 @@ function checkWinner() {
   const others =
     players.filter(
       p =>
-        p.role !== "murderer" &&
+        p.role !==
+        "murderer" &&
         p.alive
     ).length;
 
@@ -3156,7 +3049,8 @@ function checkWinner() {
 
 
   if (
-    murderers >= others
+    murderers >=
+    others
   ) {
 
     return "murderers";
@@ -3185,7 +3079,6 @@ function endGame(
   hostState.winner =
     winner;
 
-
   hostState.phase =
     "GAME_OVER";
 
@@ -3203,6 +3096,9 @@ function endGame(
       )
         .map(
           player => ({
+
+            id:
+              player.id,
 
             name:
               player.name,
@@ -3230,7 +3126,7 @@ function endGame(
 
 
 /* ============================================================
-   HOST GAME RENDER
+   HOST GAME
 ============================================================ */
 
 function renderHostGame() {
@@ -3258,12 +3154,12 @@ function renderHostGame() {
 
 
   if (
-    phase === "NIGHT"
+    phase ===
+    "NIGHT"
   ) {
 
     label.textContent =
       "Night";
-
 
     title.textContent =
       "The Night Begins";
@@ -3294,12 +3190,12 @@ function renderHostGame() {
 
 
   else if (
-    phase === "DAY_REVEAL"
+    phase ===
+    "DAY_REVEAL"
   ) {
 
     label.textContent =
       "Day";
-
 
     title.textContent =
       "Morning Has Come";
@@ -3343,12 +3239,12 @@ function renderHostGame() {
 
 
   else if (
-    phase === "DAY_VOTE"
+    phase ===
+    "DAY_VOTE"
   ) {
 
     label.textContent =
       "Day Vote";
-
 
     title.textContent =
       "Who Do You Suspect?";
@@ -3434,7 +3330,7 @@ function renderHostGame() {
 
 
 /* ============================================================
-   CLIENT RECEIVES DATA
+   CLIENT DATA
 ============================================================ */
 
 function handleClientReceivedData(
@@ -3445,16 +3341,13 @@ function handleClientReceivedData(
     !data ||
     !data.type
   ) {
-
     return;
-
   }
 
 
-  /* JOIN SUCCESS */
-
   if (
-    data.type === "JOIN_SUCCESS"
+    data.type ===
+    "JOIN_SUCCESS"
   ) {
 
     localPlayer.id =
@@ -3475,7 +3368,7 @@ function handleClientReceivedData(
         );
 
       },
-      400
+      350
     );
 
 
@@ -3484,10 +3377,9 @@ function handleClientReceivedData(
   }
 
 
-  /* JOIN ERROR */
-
   if (
-    data.type === "JOIN_ERROR"
+    data.type ===
+    "JOIN_ERROR"
   ) {
 
     showJoinStatus(
@@ -3501,23 +3393,19 @@ function handleClientReceivedData(
   }
 
 
-  /* ROLE */
-
   if (
-    data.type === "ROLE_ASSIGNMENT"
+    data.type ===
+    "ROLE_ASSIGNMENT"
   ) {
 
     localPlayer.role =
       data.role;
 
-
     localPlayer.alive =
       true;
 
-
     localPlayer.hasSubmittedNightAction =
       false;
-
 
     renderPlayerRole();
 
@@ -3526,10 +3414,9 @@ function handleClientReceivedData(
   }
 
 
-  /* PLAYER LIST */
-
   if (
-    data.type === "PLAYER_LIST"
+    data.type ===
+    "PLAYER_LIST"
   ) {
 
     currentPlayers =
@@ -3544,45 +3431,37 @@ function handleClientReceivedData(
       currentPlayers
     );
 
-
     return;
 
   }
 
 
-  /* PHASE */
-
   if (
-    data.type === "PHASE_CHANGE"
+    data.type ===
+    "PHASE_CHANGE"
   ) {
 
-    if (
+    hostState.timerSeconds =
       typeof data.timerSeconds ===
       "number"
-    ) {
+        ? data.timerSeconds
+        : 0;
 
-      hostState.timerSeconds =
-        data.timerSeconds;
 
-      updateTimers();
-
-    }
-
+    updateTimers();
 
     setPlayerPhase(
       data.phase
     );
 
-
     return;
 
   }
 
 
-  /* NIGHT RESULT */
-
   if (
-    data.type === "NIGHT_RESULT"
+    data.type ===
+    "NIGHT_RESULT"
   ) {
 
     if (
@@ -3600,13 +3479,10 @@ function handleClientReceivedData(
       data
     );
 
-
     return;
 
   }
 
-
-  /* INVESTIGATION */
 
   if (
     data.type ===
@@ -3617,16 +3493,14 @@ function handleClientReceivedData(
       data
     );
 
-
     return;
 
   }
 
 
-  /* VOTE RESULT */
-
   if (
-    data.type === "VOTE_RESULT"
+    data.type ===
+    "VOTE_RESULT"
   ) {
 
     if (
@@ -3644,23 +3518,21 @@ function handleClientReceivedData(
       data
     );
 
-
     return;
 
   }
 
 
-  /* GAME OVER */
-
   if (
-    data.type === "GAME_OVER"
+    data.type ===
+    "GAME_OVER"
   ) {
 
     const me =
       data.players.find(
         p =>
-          p.name ===
-          localPlayer.name
+          p.id ===
+          localPlayer.id
       );
 
 
@@ -3676,8 +3548,6 @@ function handleClientReceivedData(
       data.winner,
       data.players
     );
-
-    return;
 
   }
 
@@ -3708,7 +3578,6 @@ function renderPlayerRole() {
 
     roleName.textContent =
       "Waiting...";
-
 
     description.textContent =
       "The host has not started the game yet.";
@@ -3756,7 +3625,8 @@ function setPlayerPhase(
 
 
   if (
-    phase === "NIGHT"
+    phase ===
+    "NIGHT"
   ) {
 
     title.textContent =
@@ -3773,7 +3643,8 @@ function setPlayerPhase(
 
 
   else if (
-    phase === "DAY_REVEAL"
+    phase ===
+    "DAY_REVEAL"
   ) {
 
     title.textContent =
@@ -3807,7 +3678,8 @@ function setPlayerPhase(
 
 
   else if (
-    phase === "DAY_VOTE"
+    phase ===
+    "DAY_VOTE"
   ) {
 
     title.textContent =
@@ -3864,7 +3736,6 @@ function renderPlayerNight() {
       </div>
 
     `;
-
 
     lucide.createIcons();
 
@@ -3958,11 +3829,56 @@ function requestTargets() {
 
 
 /* ============================================================
-   MURDERER ACTION
+   NIGHT ROLE SCREENS
 ============================================================ */
 
 function renderMurdererAction() {
 
+  renderNightActionScreen(
+    "skull",
+    "Choose your target",
+    "Select a player.",
+    "Choose who you want to target.",
+    "murder"
+  );
+
+}
+
+
+function renderDoctorAction() {
+
+  renderNightActionScreen(
+    "heart-pulse",
+    "Choose someone to protect",
+    "Your protection can prevent a night elimination.",
+    "Choose who you want to protect.",
+    "protect"
+  );
+
+}
+
+
+function renderDetectiveAction() {
+
+  renderNightActionScreen(
+    "search",
+    "Investigate a player",
+    "Discover whether they are a murderer.",
+    "Choose who you want to investigate.",
+    "investigate"
+  );
+
+}
+
+
+function renderNightActionScreen(
+  icon,
+  title,
+  description,
+  buttonText,
+  action
+) {
+
   const content =
     document.getElementById(
       "player-content"
@@ -3974,16 +3890,16 @@ function renderMurdererAction() {
     <div class="text-center">
 
       <i
-        data-lucide="skull"
+        data-lucide="${icon}"
         class="w-12 h-12 mx-auto text-red-500 mb-4"
       ></i>
 
       <h3 class="text-2xl font-bold">
-        Choose your target
+        ${title}
       </h3>
 
       <p class="text-zinc-500 mt-2">
-        Select a player.
+        ${description}
       </p>
 
       <div
@@ -4004,111 +3920,14 @@ function renderMurdererAction() {
 
   `;
 
-}
 
-
-/* ============================================================
-   DOCTOR ACTION
-============================================================ */
-
-function renderDoctorAction() {
-
-  const content =
-    document.getElementById(
-      "player-content"
-    );
-
-
-  content.innerHTML = `
-
-    <div class="text-center">
-
-      <i
-        data-lucide="heart-pulse"
-        class="w-12 h-12 mx-auto text-green-500 mb-4"
-      ></i>
-
-      <h3 class="text-2xl font-bold">
-        Choose someone to protect
-      </h3>
-
-      <p class="text-zinc-500 mt-2">
-        Your protection can prevent a night elimination.
-      </p>
-
-      <div
-        id="night-target-list"
-        class="grid gap-3 mt-6"
-      >
-
-        <button
-          onclick="requestTargets()"
-          class="rounded-xl bg-zinc-800 hover:bg-zinc-700 py-4 font-semibold"
-        >
-          Load Players
-        </button>
-
-      </div>
-
-    </div>
-
-  `;
+  lucide.createIcons();
 
 }
 
 
 /* ============================================================
-   DETECTIVE ACTION
-============================================================ */
-
-function renderDetectiveAction() {
-
-  const content =
-    document.getElementById(
-      "player-content"
-    );
-
-
-  content.innerHTML = `
-
-    <div class="text-center">
-
-      <i
-        data-lucide="search"
-        class="w-12 h-12 mx-auto text-blue-400 mb-4"
-      ></i>
-
-      <h3 class="text-2xl font-bold">
-        Investigate a player
-      </h3>
-
-      <p class="text-zinc-500 mt-2">
-        Discover whether they are a murderer.
-      </p>
-
-      <div
-        id="night-target-list"
-        class="grid gap-3 mt-6"
-      >
-
-        <button
-          onclick="requestTargets()"
-          class="rounded-xl bg-zinc-800 hover:bg-zinc-700 py-4 font-semibold"
-        >
-          Load Players
-        </button>
-
-      </div>
-
-    </div>
-
-  `;
-
-}
-
-
-/* ============================================================
-   SEND NIGHT ACTION
+   NIGHT ACTION
 ============================================================ */
 
 function sendNightAction(
@@ -4198,88 +4017,60 @@ function renderTargetButtons(
       player =>
         player.alive &&
         player.id !==
-          localPlayer.id
+        localPlayer.id
     );
 
 
   if (nightList) {
 
-    if (
-      available.length === 0
-    ) {
-
-      nightList.innerHTML = `
-
-        <p class="text-zinc-500 py-4">
-          No available players.
-        </p>
-
-      `;
-
-    } else {
-
-      nightList.innerHTML =
-        available
-          .map(
+    nightList.innerHTML =
+      available.length
+        ? available.map(
             player => `
 
               <button
                 class="btn rounded-xl bg-zinc-800 hover:bg-red-900/50 border border-zinc-800 hover:border-red-700 p-4 text-left font-bold"
                 onclick="chooseNightTarget('${escapeAttribute(player.id)}')"
               >
-
                 ${escapeHTML(
                   player.name
                 )}
-
               </button>
 
             `
-          )
-          .join("");
-
-    }
+          ).join("")
+        : `
+            <p class="text-zinc-500 py-4">
+              No available players.
+            </p>
+          `;
 
   }
 
 
   if (voteList) {
 
-    if (
-      available.length === 0
-    ) {
-
-      voteList.innerHTML = `
-
-        <p class="text-zinc-500 py-4">
-          No available players.
-        </p>
-
-      `;
-
-    } else {
-
-      voteList.innerHTML =
-        available
-          .map(
+    voteList.innerHTML =
+      available.length
+        ? available.map(
             player => `
 
               <button
                 class="btn rounded-xl bg-zinc-800 hover:bg-red-900/50 border border-zinc-800 hover:border-red-700 p-4 text-left font-bold"
                 onclick="castVote('${escapeAttribute(player.id)}')"
               >
-
                 ${escapeHTML(
                   player.name
                 )}
-
               </button>
 
             `
-          )
-          .join("");
-
-    }
+          ).join("")
+        : `
+            <p class="text-zinc-500 py-4">
+              No available players.
+            </p>
+          `;
 
   }
 
@@ -4290,7 +4081,7 @@ function renderTargetButtons(
 
 
 /* ============================================================
-   CHOOSE NIGHT TARGET
+   CHOOSE TARGET
 ============================================================ */
 
 function chooseNightTarget(
@@ -4332,7 +4123,7 @@ function chooseNightTarget(
 
 
 /* ============================================================
-   PLAYER VOTING
+   VOTING
 ============================================================ */
 
 function renderPlayerVoting() {
@@ -4363,7 +4154,6 @@ function renderPlayerVoting() {
       </div>
 
     `;
-
 
     lucide.createIcons();
 
@@ -4412,7 +4202,7 @@ function renderPlayerVoting() {
 
 
 /* ============================================================
-   CAST VOTE
+   VOTE
 ============================================================ */
 
 function castVote(
@@ -4474,7 +4264,7 @@ function castVote(
 
 
 /* ============================================================
-   NIGHT RESULT
+   RESULTS
 ============================================================ */
 
 function renderNightResult(
@@ -4487,18 +4277,10 @@ function renderNightResult(
     );
 
 
-  let message =
-    "Everyone survived the night.";
-
-
-  if (
+  const message =
     data.killedName
-  ) {
-
-    message =
-      `${data.killedName} did not survive the night.`;
-
-  }
+      ? `${data.killedName} did not survive the night.`
+      : "Everyone survived the night.";
 
 
   content.innerHTML = `
@@ -4515,9 +4297,7 @@ function renderNightResult(
       </h3>
 
       <p class="text-zinc-400 mt-3">
-        ${escapeHTML(
-          message
-        )}
+        ${escapeHTML(message)}
       </p>
 
     </div>
@@ -4529,10 +4309,6 @@ function renderNightResult(
 
 }
 
-
-/* ============================================================
-   INVESTIGATION RESULT
-============================================================ */
 
 function handleInvestigationResult(
   data
@@ -4591,10 +4367,6 @@ function handleInvestigationResult(
 }
 
 
-/* ============================================================
-   VOTE RESULT
-============================================================ */
-
 function renderVoteResult(
   data
 ) {
@@ -4605,18 +4377,10 @@ function renderVoteResult(
     );
 
 
-  let message =
-    "The vote ended in a tie. Nobody was eliminated.";
-
-
-  if (
+  const message =
     data.eliminatedName
-  ) {
-
-    message =
-      `${data.eliminatedName} was eliminated by the vote.`;
-
-  }
+      ? `${data.eliminatedName} was eliminated by the vote.`
+      : "The vote ended in a tie. Nobody was eliminated.";
 
 
   content.innerHTML = `
@@ -4633,9 +4397,7 @@ function renderVoteResult(
       </h3>
 
       <p class="text-zinc-400 mt-3">
-        ${escapeHTML(
-          message
-        )}
+        ${escapeHTML(message)}
       </p>
 
     </div>
@@ -4665,7 +4427,8 @@ function showGameOver(
   document.getElementById(
     "winner-title"
   ).textContent =
-    winner === "murderers"
+    winner ===
+    "murderers"
       ? "Murderers Win"
       : "Innocents Win";
 
@@ -4673,7 +4436,8 @@ function showGameOver(
   document.getElementById(
     "winner-description"
   ).textContent =
-    winner === "murderers"
+    winner ===
+    "murderers"
       ? "The murderers have taken control of the game."
       : "The innocent team successfully stopped the murderers.";
 
@@ -4729,7 +4493,7 @@ function showGameOver(
 
 
 /* ============================================================
-   COPY JOIN LINK
+   COPY
 ============================================================ */
 
 async function copyJoinLink() {
@@ -4739,7 +4503,7 @@ async function copyJoinLink() {
   ) {
 
     alert(
-      "Host is still connecting. Please wait a moment."
+      "Host is still connecting."
     );
 
     return;
@@ -4752,12 +4516,6 @@ async function copyJoinLink() {
       hostState.roomCode,
       net.hostPeerId
     );
-
-
-  console.log(
-    "COPY JOIN URL:",
-    url
-  );
 
 
   try {
@@ -4773,23 +4531,18 @@ async function copyJoinLink() {
         "textarea"
       );
 
-
     textarea.value =
       url;
-
 
     document.body.appendChild(
       textarea
     );
 
-
     textarea.select();
-
 
     document.execCommand(
       "copy"
     );
-
 
     textarea.remove();
 
@@ -4822,7 +4575,7 @@ async function copyJoinLink() {
 
 
 /* ============================================================
-   JOIN GAME
+   JOIN
 ============================================================ */
 
 async function joinGame(
@@ -4849,10 +4602,6 @@ async function joinGame(
       .trim();
 
 
-  /*
-    Get host ID from QR URL.
-  */
-
   const params =
     new URLSearchParams(
       window.location.search
@@ -4871,7 +4620,7 @@ async function joinGame(
   ) {
 
     showJoinStatus(
-      "Enter a valid 4-character room code and your name.",
+      "Enter a valid room code and your name.",
       false
     );
 
@@ -4880,23 +4629,11 @@ async function joinGame(
   }
 
 
-  /*
-    A random host Peer ID is required.
-
-    Therefore an old QR code or manually typed room code alone
-    cannot discover a random host.
-  */
-
-  if (
-    !hostPeerId
-  ) {
+  if (!hostPeerId) {
 
     showJoinStatus(
-
-      "Please scan the QR code from the host or use the copied Join Link. A room code by itself cannot locate the host.",
-
+      "Scan the host's QR code. The room code alone cannot locate the host.",
       false
-
     );
 
     return;
@@ -4913,13 +4650,12 @@ async function joinGame(
   button.disabled =
     true;
 
-
   button.textContent =
     "Connecting...";
 
 
   showJoinStatus(
-    "Connecting to the host...",
+    "Connecting to host...",
     true
   );
 
@@ -4972,15 +4708,10 @@ async function joinGame(
 
 
     console.log(
-      "Successfully connected to room:",
-      roomCode
+      "[CLIENT] Connected!",
+      connection
     );
 
-
-    /*
-      Host will send PLAYER_LIST after JOIN_REQUEST,
-      but request again to make sure the client gets it.
-    */
 
     setTimeout(
       () => {
@@ -4991,10 +4722,8 @@ async function joinGame(
         ) {
 
           connection.send({
-
             type:
               "REQUEST_PLAYERS"
-
           });
 
         }
@@ -5007,14 +4736,14 @@ async function joinGame(
   } catch (error) {
 
     console.error(
-      "JOIN ERROR:",
+      "[CLIENT] JOIN FAILED:",
       error
     );
 
 
     showJoinStatus(
       error.message ||
-      "Unable to connect to the game.",
+      "Unable to connect.",
       false
     );
 
@@ -5022,20 +4751,11 @@ async function joinGame(
     button.disabled =
       false;
 
-
     button.textContent =
       "Join Game";
 
 
-    /*
-      Clean up failed PeerJS connection.
-    */
-
-    try {
-
-      net.destroy();
-
-    } catch {}
+    net.destroy();
 
   }
 
@@ -5043,7 +4763,7 @@ async function joinGame(
 
 
 /* ============================================================
-   AUTO JOIN FROM QR
+   URL
 ============================================================ */
 
 function checkRoomFromURL() {
@@ -5057,12 +4777,6 @@ function checkRoomFromURL() {
   const room =
     params.get(
       "room"
-    );
-
-
-  const host =
-    params.get(
-      "host"
     );
 
 
@@ -5107,18 +4821,13 @@ function checkRoomFromURL() {
   );
 
 
-  /*
-    Tell the user whether this is a proper QR link.
-  */
-
-  if (!host) {
+  if (
+    !params.get("host")
+  ) {
 
     showJoinStatus(
-
-      "Enter the room code, but use the host's QR/copy link to connect.",
-
+      "Please scan the host's current QR code.",
       false
-
     );
 
   }
@@ -5132,14 +4841,14 @@ function checkRoomFromURL() {
       ).focus();
 
     },
-    150
+    200
   );
 
 }
 
 
 /* ============================================================
-   ESCAPING
+   HELPERS
 ============================================================ */
 
 function escapeHTML(
@@ -5147,31 +4856,11 @@ function escapeHTML(
 ) {
 
   return String(value)
-
-    .replaceAll(
-      "&",
-      "&amp;"
-    )
-
-    .replaceAll(
-      "<",
-      "&lt;"
-    )
-
-    .replaceAll(
-      ">",
-      "&gt;"
-    )
-
-    .replaceAll(
-      '"',
-      "&quot;"
-    )
-
-    .replaceAll(
-      "'",
-      "&#039;"
-    );
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 
 }
 
@@ -5181,16 +4870,8 @@ function escapeAttribute(
 ) {
 
   return String(value)
-
-    .replaceAll(
-      "\\",
-      "\\\\"
-    )
-
-    .replaceAll(
-      "'",
-      "\\'"
-    );
+    .replaceAll("\\", "\\\\")
+    .replaceAll("'", "\\'");
 
 }
 
@@ -5200,11 +4881,8 @@ function capitalize(
 ) {
 
   if (!value) {
-
     return "";
-
   }
-
 
   return (
     value.charAt(0).toUpperCase() +
@@ -5215,7 +4893,7 @@ function capitalize(
 
 
 /* ============================================================
-   BUTTON EVENTS
+   EVENTS
 ============================================================ */
 
 document.getElementById(
@@ -5235,7 +4913,6 @@ document.getElementById(
     showView(
       "join-view"
     );
-
 
     document.getElementById(
       "join-code"
@@ -5301,7 +4978,6 @@ document.getElementById(
 
     net.destroy();
 
-
     window.location.href =
       window.location.origin +
       window.location.pathname;
@@ -5311,7 +4987,7 @@ document.getElementById(
 
 
 /* ============================================================
-   INITIALIZE
+   INIT
 ============================================================ */
 
 document.addEventListener(
