@@ -3,10 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
   <title>Whispers in the Dark</title>
 
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+
+  <!-- UPDATED PEERJS -->
+  <script src="https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js"></script>
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
 
@@ -59,19 +63,6 @@
       transform: translateY(0);
     }
 
-    .role-card {
-      transition: all 0.2s ease;
-    }
-
-    .role-card:hover {
-      border-color: rgba(220, 38, 38, 0.4);
-    }
-
-    .role-card.selected {
-      border-color: rgba(220, 38, 38, 0.8);
-      background: rgba(127, 29, 29, 0.18);
-    }
-
     .pulse {
       animation: pulse 1.7s infinite;
     }
@@ -109,16 +100,6 @@
       border-radius: 10px;
     }
 
-    .role-hidden {
-      filter: blur(10px);
-      user-select: none;
-      cursor: pointer;
-    }
-
-    .role-hidden * {
-      pointer-events: none;
-    }
-
     .timer {
       font-variant-numeric: tabular-nums;
     }
@@ -134,369 +115,549 @@
 
 <body>
 
-  <!-- LANDING -->
-  <section id="landing-view" class="min-h-screen flex items-center justify-center p-5">
-    <div class="w-full max-w-xl text-center">
-      <div class="mb-8">
-        <div class="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-red-950/40 border border-red-800/40 mb-5">
-          <i data-lucide="moon" class="w-10 h-10 text-red-500"></i>
-        </div>
+<!-- ============================================================
+     LANDING
+============================================================ -->
 
-        <h1 class="text-5xl md:text-6xl font-black tracking-tight">
-          Whispers in the <span class="text-red-500">Dark</span>
-        </h1>
+<section id="landing-view" class="min-h-screen flex items-center justify-center p-5">
 
-        <p class="text-zinc-400 mt-4 text-lg">
-          A multiplayer mystery of deception, deduction, and survival.
-        </p>
+  <div class="w-full max-w-xl text-center">
+
+    <div class="mb-8">
+
+      <div class="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-red-950/40 border border-red-800/40 mb-5">
+        <i data-lucide="moon" class="w-10 h-10 text-red-500"></i>
       </div>
 
-      <div class="glass red-glow rounded-3xl p-6 md:p-8">
-        <div class="grid md:grid-cols-2 gap-4">
-          <button
-            id="btn-create"
-            class="btn rounded-2xl bg-red-600 hover:bg-red-500 px-6 py-5 font-bold text-lg flex items-center justify-center gap-3"
-          >
-            <i data-lucide="crown"></i>
-            Create Game
-          </button>
+      <h1 class="text-5xl md:text-6xl font-black tracking-tight">
+        Whispers in the <span class="text-red-500">Dark</span>
+      </h1>
 
-          <button
-            id="btn-show-join"
-            class="btn rounded-2xl bg-zinc-800 hover:bg-zinc-700 px-6 py-5 font-bold text-lg flex items-center justify-center gap-3"
-          >
-            <i data-lucide="log-in"></i>
-            Join Game
-          </button>
-        </div>
-      </div>
-
-      <p class="text-zinc-600 text-sm mt-6">
-        No account required • Works on phones, tablets, and computers
+      <p class="text-zinc-400 mt-4 text-lg">
+        A multiplayer mystery of deception, deduction, and survival.
       </p>
+
     </div>
-  </section>
+
+    <div class="glass red-glow rounded-3xl p-6 md:p-8">
+
+      <div class="grid md:grid-cols-2 gap-4">
+
+        <button
+          id="btn-create"
+          class="btn rounded-2xl bg-red-600 hover:bg-red-500 px-6 py-5 font-bold text-lg flex items-center justify-center gap-3"
+        >
+          <i data-lucide="crown"></i>
+          Create Game
+        </button>
+
+        <button
+          id="btn-show-join"
+          class="btn rounded-2xl bg-zinc-800 hover:bg-zinc-700 px-6 py-5 font-bold text-lg flex items-center justify-center gap-3"
+        >
+          <i data-lucide="log-in"></i>
+          Join Game
+        </button>
+
+      </div>
+
+    </div>
+
+    <p class="text-zinc-600 text-sm mt-6">
+      No account required • Works on phones, tablets, and computers
+    </p>
+
+  </div>
+
+</section>
 
 
-  <!-- JOIN -->
-  <section id="join-view" class="hidden min-h-screen flex items-center justify-center p-5">
-    <div class="w-full max-w-md">
-      <button id="btn-back-landing" class="text-zinc-400 hover:text-white mb-5 flex items-center gap-2">
-        <i data-lucide="arrow-left" class="w-4"></i>
-        Back
-      </button>
+<!-- ============================================================
+     JOIN
+============================================================ -->
 
-      <div class="glass rounded-3xl p-7">
-        <div class="text-center mb-7">
-          <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-red-950/40 mb-4">
-            <i data-lucide="door-open" class="text-red-500 w-8 h-8"></i>
-          </div>
+<section id="join-view" class="hidden min-h-screen flex items-center justify-center p-5">
 
-          <h2 class="text-3xl font-bold">Join Game</h2>
-          <p class="text-zinc-500 mt-2">
-            Enter the 4-character room code
-          </p>
+  <div class="w-full max-w-md">
+
+    <button
+      id="btn-back-landing"
+      class="text-zinc-400 hover:text-white mb-5 flex items-center gap-2"
+    >
+      <i data-lucide="arrow-left" class="w-4"></i>
+      Back
+    </button>
+
+    <div class="glass rounded-3xl p-7">
+
+      <div class="text-center mb-7">
+
+        <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-red-950/40 mb-4">
+          <i data-lucide="door-open" class="text-red-500 w-8 h-8"></i>
         </div>
 
-        <form id="join-form" class="space-y-4">
-          <div>
-            <label class="block text-sm text-zinc-400 mb-2">
-              Room Code
-            </label>
+        <h2 class="text-3xl font-bold">
+          Join Game
+        </h2>
 
-            <input
-              id="join-code"
-              maxlength="4"
-              autocomplete="off"
-              autocapitalize="characters"
-              class="w-full rounded-xl bg-black/40 border border-zinc-800 px-4 py-4 text-center text-3xl font-black tracking-[0.35em] uppercase"
-              placeholder="ABCD"
-              required
-            >
-          </div>
+        <p class="text-zinc-500 mt-2">
+          Enter the 4-character room code
+        </p>
 
-          <div>
-            <label class="block text-sm text-zinc-400 mb-2">
-              Your Name
-            </label>
-
-            <input
-              id="join-name"
-              maxlength="20"
-              autocomplete="name"
-              class="w-full rounded-xl bg-black/40 border border-zinc-800 px-4 py-4"
-              placeholder="Enter your name"
-              required
-            >
-          </div>
-
-          <button
-            type="submit"
-            class="btn w-full rounded-xl bg-red-600 hover:bg-red-500 py-4 font-bold text-lg"
-          >
-            Join Game
-          </button>
-        </form>
-
-        <div id="join-status" class="hidden mt-5 rounded-xl p-4 text-center text-sm"></div>
       </div>
-    </div>
-  </section>
 
+      <form id="join-form" class="space-y-4">
 
-  <!-- HOST LOBBY -->
-  <section id="host-lobby-view" class="hidden min-h-screen p-5">
-    <div class="max-w-6xl mx-auto">
-      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
         <div>
-          <p class="text-red-500 text-sm font-bold uppercase tracking-widest">
-            Host Lobby
-          </p>
-          <h2 class="text-3xl font-black">
-            Whispers in the Dark
-          </h2>
+
+          <label class="block text-sm text-zinc-400 mb-2">
+            Room Code
+          </label>
+
+          <input
+            id="join-code"
+            maxlength="4"
+            autocomplete="off"
+            autocapitalize="characters"
+            class="w-full rounded-xl bg-black/40 border border-zinc-800 px-4 py-4 text-center text-3xl font-black tracking-[0.35em] uppercase"
+            placeholder="ABCD"
+            required
+          >
+
+        </div>
+
+        <div>
+
+          <label class="block text-sm text-zinc-400 mb-2">
+            Your Name
+          </label>
+
+          <input
+            id="join-name"
+            maxlength="20"
+            autocomplete="name"
+            class="w-full rounded-xl bg-black/40 border border-zinc-800 px-4 py-4"
+            placeholder="Enter your name"
+            required
+          >
+
         </div>
 
         <button
-          id="btn-host-start"
-          class="btn rounded-xl bg-red-600 hover:bg-red-500 px-6 py-3 font-bold"
+          type="submit"
+          class="btn w-full rounded-xl bg-red-600 hover:bg-red-500 py-4 font-bold text-lg"
         >
-          Start Game
+          Join Game
         </button>
-      </div>
 
-      <div class="grid lg:grid-cols-3 gap-5">
+      </form>
 
-        <div class="glass rounded-3xl p-6 text-center">
-          <p class="text-zinc-500 text-sm mb-2">Room Code</p>
-
-          <div
-            id="host-room-code"
-            class="text-6xl font-black tracking-[0.2em] text-red-500"
-          >
-            ----
-          </div>
-
-          <p class="text-zinc-500 text-sm mt-4">
-            Scan the QR code or enter this code manually.
-          </p>
-
-          <div class="bg-white rounded-2xl p-5 mt-6 inline-block">
-            <div id="qrcode"></div>
-          </div>
-
-          <button
-            id="btn-copy-link"
-            class="btn w-full mt-5 rounded-xl bg-zinc-800 hover:bg-zinc-700 py-3 font-semibold flex items-center justify-center gap-2"
-          >
-            <i data-lucide="copy" class="w-4"></i>
-            Copy Join Link
-          </button>
-
-          <p id="copy-status" class="text-green-400 text-sm mt-3 hidden">
-            Join link copied!
-          </p>
-        </div>
-
-
-        <div class="glass rounded-3xl p-6 lg:col-span-2">
-          <div class="flex items-center justify-between mb-5">
-            <div>
-              <p class="text-zinc-500 text-sm">Players</p>
-              <h3 class="text-2xl font-bold">
-                Waiting Room
-              </h3>
-            </div>
-
-            <div
-              id="host-player-count"
-              class="rounded-full bg-zinc-800 px-4 py-2 text-sm font-bold"
-            >
-              0 players
-            </div>
-          </div>
-
-          <div
-            id="host-roster"
-            class="space-y-3"
-          ></div>
-
-          <div
-            id="host-empty"
-            class="text-center py-14 text-zinc-600"
-          >
-            <i data-lucide="users" class="w-10 h-10 mx-auto mb-3"></i>
-            <p>Waiting for players to join...</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-
-  <!-- HOST GAME -->
-  <section id="host-game-view" class="hidden min-h-screen p-5">
-    <div class="max-w-6xl mx-auto">
-
-      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-        <div>
-          <p id="host-phase-label" class="text-red-500 font-bold uppercase tracking-widest text-sm">
-            Night
-          </p>
-
-          <h2 id="host-phase-title" class="text-3xl font-black">
-            The Night Begins
-          </h2>
-        </div>
-
-        <div class="flex items-center gap-3">
-          <div class="glass rounded-xl px-5 py-3">
-            <span class="text-zinc-500 text-sm">Time</span>
-            <span id="host-timer" class="timer text-xl font-black ml-2">--</span>
-          </div>
-
-          <button
-            id="btn-host-next-phase"
-            class="btn rounded-xl bg-zinc-800 hover:bg-zinc-700 px-5 py-3 font-bold"
-          >
-            Force Advance
-          </button>
-        </div>
-      </div>
-
-      <div id="host-game-content" class="glass rounded-3xl p-6"></div>
-    </div>
-  </section>
-
-
-  <!-- PLAYER -->
-  <section id="player-view" class="hidden min-h-screen p-5">
-    <div class="max-w-3xl mx-auto">
-
-      <div class="flex items-center justify-between mb-5">
-        <div>
-          <p id="player-phase-label" class="text-red-500 font-bold uppercase tracking-widest text-sm">
-            Lobby
-          </p>
-
-          <h2 id="player-phase-title" class="text-3xl font-black">
-            Waiting...
-          </h2>
-        </div>
-
-        <div class="glass rounded-xl px-4 py-3">
-          <span class="text-zinc-500 text-sm">Time</span>
-          <span id="player-timer" class="timer text-xl font-black ml-2">--</span>
-        </div>
-      </div>
-
-      <!-- ROLE CARD -->
       <div
-        id="player-role-card"
-        class="glass rounded-3xl p-7 mb-5 text-center"
+        id="join-status"
+        class="hidden mt-5 rounded-xl p-4 text-center text-sm"
+      ></div>
+
+    </div>
+
+  </div>
+
+</section>
+
+
+<!-- ============================================================
+     HOST LOBBY
+============================================================ -->
+
+<section id="host-lobby-view" class="hidden min-h-screen p-5">
+
+  <div class="max-w-6xl mx-auto">
+
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+
+      <div>
+
+        <p class="text-red-500 text-sm font-bold uppercase tracking-widest">
+          Host Lobby
+        </p>
+
+        <h2 class="text-3xl font-black">
+          Whispers in the Dark
+        </h2>
+
+      </div>
+
+      <button
+        id="btn-host-start"
+        class="btn rounded-xl bg-red-600 hover:bg-red-500 px-6 py-3 font-bold"
       >
-        <p class="text-zinc-500 text-sm mb-3">
-          Your Role
+        Start Game
+      </button>
+
+    </div>
+
+
+    <div class="grid lg:grid-cols-3 gap-5">
+
+      <!-- QR -->
+
+      <div class="glass rounded-3xl p-6 text-center">
+
+        <p class="text-zinc-500 text-sm mb-2">
+          Room Code
         </p>
 
         <div
-          id="player-role-name"
-          class="text-4xl font-black text-red-500"
+          id="host-room-code"
+          class="text-6xl font-black tracking-[0.2em] text-red-500"
         >
-          Waiting...
+          ----
         </div>
 
-        <p
-          id="player-role-description"
-          class="text-zinc-400 mt-3"
-        >
-          The host has not started the game yet.
+        <p class="text-zinc-500 text-sm mt-4">
+          Scan the QR code with your phone.
         </p>
+
+        <div class="bg-white rounded-2xl p-5 mt-6 inline-block">
+
+          <div id="qrcode"></div>
+
+        </div>
+
+        <button
+          id="btn-copy-link"
+          class="btn w-full mt-5 rounded-xl bg-zinc-800 hover:bg-zinc-700 py-3 font-semibold flex items-center justify-center gap-2"
+        >
+          <i data-lucide="copy" class="w-4"></i>
+          Copy Join Link
+        </button>
+
+        <p
+          id="copy-status"
+          class="text-green-400 text-sm mt-3 hidden"
+        >
+          Join link copied!
+        </p>
+
+        <p
+          id="host-connection-status"
+          class="text-green-400 text-xs mt-4"
+        >
+          Connecting host...
+        </p>
+
       </div>
 
-      <div
-        id="player-content"
-        class="glass rounded-3xl p-6"
-      ></div>
+
+      <!-- PLAYERS -->
+
+      <div class="glass rounded-3xl p-6 lg:col-span-2">
+
+        <div class="flex items-center justify-between mb-5">
+
+          <div>
+
+            <p class="text-zinc-500 text-sm">
+              Players
+            </p>
+
+            <h3 class="text-2xl font-bold">
+              Waiting Room
+            </h3>
+
+          </div>
+
+          <div
+            id="host-player-count"
+            class="rounded-full bg-zinc-800 px-4 py-2 text-sm font-bold"
+          >
+            0 players
+          </div>
+
+        </div>
+
+        <div
+          id="host-roster"
+          class="space-y-3"
+        ></div>
+
+        <div
+          id="host-empty"
+          class="text-center py-14 text-zinc-600"
+        >
+
+          <i data-lucide="users" class="w-10 h-10 mx-auto mb-3"></i>
+
+          <p>
+            Waiting for players to join...
+          </p>
+
+        </div>
+
+      </div>
+
     </div>
-  </section>
+
+  </div>
+
+</section>
 
 
-  <!-- GAME OVER -->
-  <section id="game-over-view" class="hidden min-h-screen flex items-center justify-center p-5">
-    <div class="w-full max-w-3xl">
+<!-- ============================================================
+     HOST GAME
+============================================================ -->
 
-      <div class="glass rounded-3xl p-8 text-center">
-        <i data-lucide="trophy" class="w-16 h-16 text-red-500 mx-auto mb-5"></i>
+<section id="host-game-view" class="hidden min-h-screen p-5">
 
-        <p class="text-zinc-500 uppercase tracking-widest text-sm">
-          Game Over
+  <div class="max-w-6xl mx-auto">
+
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+
+      <div>
+
+        <p
+          id="host-phase-label"
+          class="text-red-500 font-bold uppercase tracking-widest text-sm"
+        >
+          Night
         </p>
 
         <h2
-          id="winner-title"
-          class="text-5xl font-black mt-2"
+          id="host-phase-title"
+          class="text-3xl font-black"
         >
-          ----
+          The Night Begins
         </h2>
 
-        <p
-          id="winner-description"
-          class="text-zinc-400 mt-4"
-        ></p>
+      </div>
 
-        <div
-          id="final-roles"
-          class="mt-8 text-left"
-        ></div>
+      <div class="flex items-center gap-3">
+
+        <div class="glass rounded-xl px-5 py-3">
+
+          <span class="text-zinc-500 text-sm">
+            Time
+          </span>
+
+          <span
+            id="host-timer"
+            class="timer text-xl font-black ml-2"
+          >
+            --
+          </span>
+
+        </div>
 
         <button
-          id="btn-restart"
-          class="btn mt-8 rounded-xl bg-red-600 hover:bg-red-500 px-7 py-4 font-bold"
+          id="btn-host-next-phase"
+          class="btn rounded-xl bg-zinc-800 hover:bg-zinc-700 px-5 py-3 font-bold"
         >
-          Return to Home
+          Force Advance
         </button>
+
       </div>
+
     </div>
-  </section>
+
+    <div
+      id="host-game-content"
+      class="glass rounded-3xl p-6"
+    ></div>
+
+  </div>
+
+</section>
+
+
+<!-- ============================================================
+     PLAYER
+============================================================ -->
+
+<section id="player-view" class="hidden min-h-screen p-5">
+
+  <div class="max-w-3xl mx-auto">
+
+    <div class="flex items-center justify-between mb-5">
+
+      <div>
+
+        <p
+          id="player-phase-label"
+          class="text-red-500 font-bold uppercase tracking-widest text-sm"
+        >
+          Lobby
+        </p>
+
+        <h2
+          id="player-phase-title"
+          class="text-3xl font-black"
+        >
+          Waiting...
+        </h2>
+
+      </div>
+
+      <div class="glass rounded-xl px-4 py-3">
+
+        <span class="text-zinc-500 text-sm">
+          Time
+        </span>
+
+        <span
+          id="player-timer"
+          class="timer text-xl font-black ml-2"
+        >
+          --
+        </span>
+
+      </div>
+
+    </div>
+
+
+    <div
+      id="player-role-card"
+      class="glass rounded-3xl p-7 mb-5 text-center"
+    >
+
+      <p class="text-zinc-500 text-sm mb-3">
+        Your Role
+      </p>
+
+      <div
+        id="player-role-name"
+        class="text-4xl font-black text-red-500"
+      >
+        Waiting...
+      </div>
+
+      <p
+        id="player-role-description"
+        class="text-zinc-400 mt-3"
+      >
+        The host has not started the game yet.
+      </p>
+
+    </div>
+
+
+    <div
+      id="player-content"
+      class="glass rounded-3xl p-6"
+    ></div>
+
+  </div>
+
+</section>
+
+
+<!-- ============================================================
+     GAME OVER
+============================================================ -->
+
+<section id="game-over-view" class="hidden min-h-screen flex items-center justify-center p-5">
+
+  <div class="w-full max-w-3xl">
+
+    <div class="glass rounded-3xl p-8 text-center">
+
+      <i
+        data-lucide="trophy"
+        class="w-16 h-16 text-red-500 mx-auto mb-5"
+      ></i>
+
+      <p class="text-zinc-500 uppercase tracking-widest text-sm">
+        Game Over
+      </p>
+
+      <h2
+        id="winner-title"
+        class="text-5xl font-black mt-2"
+      >
+        ----
+      </h2>
+
+      <p
+        id="winner-description"
+        class="text-zinc-400 mt-4"
+      ></p>
+
+      <div
+        id="final-roles"
+        class="mt-8 text-left"
+      ></div>
+
+      <button
+        id="btn-restart"
+        class="btn mt-8 rounded-xl bg-red-600 hover:bg-red-500 px-7 py-4 font-bold"
+      >
+        Return to Home
+      </button>
+
+    </div>
+
+  </div>
+
+</section>
 
 
 <script>
+
 /* ============================================================
-   GAME CONFIG
+   CONFIG
 ============================================================ */
 
 const GAME_NAME = "whispers-in-the-dark";
 
+
 const ROLE_DESCRIPTIONS = {
-  murderer: "You are one of the murderers. Work together secretly and eliminate the others.",
-  detective: "Investigate one player each night to learn whether they are a murderer.",
-  doctor: "Protect one player each night from being eliminated.",
-  innocent: "Survive, observe, discuss, and help identify the murderers."
+
+  murderer:
+    "You are one of the murderers. Work together secretly and eliminate the others.",
+
+  detective:
+    "Investigate one player each night to learn whether they are a murderer.",
+
+  doctor:
+    "Protect one player each night from being eliminated.",
+
+  innocent:
+    "Survive, observe, discuss, and help identify the murderers."
+
 };
 
 
 /* ============================================================
-   VIEW HELPERS
+   VIEWS
 ============================================================ */
 
 const views = [
+
   "landing-view",
   "join-view",
   "host-lobby-view",
   "host-game-view",
   "player-view",
   "game-over-view"
+
 ];
 
+
 function showView(id) {
+
   views.forEach(view => {
-    document.getElementById(view)?.classList.add("hidden");
+
+    document
+      .getElementById(view)
+      ?.classList.add("hidden");
+
   });
 
-  document.getElementById(id)?.classList.remove("hidden");
+  document
+    .getElementById(id)
+    ?.classList.remove("hidden");
 
   lucide.createIcons();
+
 }
 
 
@@ -505,47 +666,66 @@ function showView(id) {
 ============================================================ */
 
 function generateRoomCode() {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+  const chars =
+    "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
   let code = "";
 
   for (let i = 0; i < 4; i++) {
-    code += chars[Math.floor(Math.random() * chars.length)];
+
+    code +=
+      chars[
+        Math.floor(
+          Math.random() * chars.length
+        )
+      ];
+
   }
 
   return code;
+
 }
 
 
 /* ============================================================
-   IMPORTANT QR FIX
+   JOIN URL
 ============================================================ */
 
 /*
-   NEVER use a LAN IP for the deployed GitHub Pages version.
+   IMPORTANT:
 
-   The QR code should always point back to the exact page that
-   the host is currently using.
+   The QR code contains BOTH:
 
-   Example:
+   room = ABCD
+   host = RANDOM PEER ID
 
-   https://kashishd2023.github.io/whispers-in-the-dark/?room=ABCD
+   This means the phone knows exactly which PeerJS host to connect
+   to.
 
-   The player scans that URL on their phone.
-
-   Their phone loads the website and then connects through PeerJS.
+   No local IP address is used.
 */
 
-function getJoinURL(roomCode) {
-  const url = new URL(window.location.href);
+function getJoinURL(roomCode, hostPeerId) {
 
-  // Remove any old room information.
+  const url =
+    new URL(window.location.href);
+
   url.search = "";
   url.hash = "";
 
-  // Add the current room.
-  url.searchParams.set("room", roomCode.toUpperCase());
+  url.searchParams.set(
+    "room",
+    roomCode.toUpperCase()
+  );
+
+  url.searchParams.set(
+    "host",
+    hostPeerId
+  );
 
   return url.toString();
+
 }
 
 
@@ -556,49 +736,118 @@ function getJoinURL(roomCode) {
 class NetworkEngine {
 
   constructor() {
+
     this.peer = null;
+
     this.hostPeerId = null;
+
     this.connections = new Map();
+
+    this.clientConnection = null;
+
     this.isHost = false;
+
     this.onData = null;
+
   }
 
 
-  /*
-    Create host Peer.
+  /* ==========================================================
+     HOST INITIALIZATION
+  ========================================================== */
 
-    We keep the PeerJS ID based on the room code so that a player
-    who manually types the room code can still join.
-  */
-
-  initHost(roomCode, callback) {
+  initHost(callback) {
 
     this.isHost = true;
+
     this.onData = callback;
 
-    const cleanRoom = roomCode.toLowerCase();
-
-    this.hostPeerId = `whispers-dark-${cleanRoom}`;
 
     return new Promise((resolve, reject) => {
 
+      let settled = false;
+
+
       try {
 
-        this.peer = new Peer(this.hostPeerId, {
-          debug: 2
+        /*
+          IMPORTANT:
+
+          Do NOT manually specify a PeerJS ID.
+
+          PeerJS generates a random unique ID for this host.
+        */
+
+        this.peer = new Peer(undefined, {
+
+          debug: 2,
+
+          secure: true,
+
+          host: "0.peerjs.com",
+
+          port: 443,
+
+          path: "/",
+
+          config: {
+
+            iceServers: [
+
+              {
+                urls:
+                  "stun:stun.l.google.com:19302"
+              }
+
+            ]
+
+          }
+
         });
+
 
         this.peer.on("open", id => {
 
-          console.log("Host Peer connected:", id);
+          console.log(
+            "HOST PEER ID:",
+            id
+          );
 
-          resolve(id);
+          this.hostPeerId = id;
+
+          const status =
+            document.getElementById(
+              "host-connection-status"
+            );
+
+          if (status) {
+
+            status.textContent =
+              "✓ Host connected — ready for players";
+
+            status.className =
+              "text-green-400 text-xs mt-4";
+
+          }
+
+
+          if (!settled) {
+
+            settled = true;
+
+            resolve(id);
+
+          }
+
         });
 
 
         this.peer.on("connection", conn => {
 
-          console.log("Incoming connection:", conn.peer);
+          console.log(
+            "Incoming player connection:",
+            conn.peer
+          );
 
           this.setupHostConnection(conn);
 
@@ -607,19 +856,39 @@ class NetworkEngine {
 
         this.peer.on("error", error => {
 
-          console.error("Host Peer error:", error);
+          console.error(
+            "HOST PEER ERROR:",
+            error
+          );
 
-          if (error.type === "unavailable-id") {
+
+          const status =
+            document.getElementById(
+              "host-connection-status"
+            );
+
+
+          if (status) {
+
+            status.textContent =
+              "Host error: " +
+              (error.message || error.type);
+
+            status.className =
+              "text-red-400 text-xs mt-4";
+
+          }
+
+
+          if (!settled) {
+
+            settled = true;
 
             reject(
               new Error(
-                "This room code is already being used. Please create a new game."
+                this.getPeerErrorMessage(error)
               )
             );
-
-          } else {
-
-            reject(error);
 
           }
 
@@ -628,17 +897,53 @@ class NetworkEngine {
 
         this.peer.on("disconnected", () => {
 
-          console.warn("Host Peer disconnected from signaling server.");
+          console.warn(
+            "Host disconnected from PeerJS."
+          );
 
-          /*
-            Try reconnecting automatically.
-          */
+
+          const status =
+            document.getElementById(
+              "host-connection-status"
+            );
+
+
+          if (status) {
+
+            status.textContent =
+              "Reconnecting to PeerJS...";
+
+            status.className =
+              "text-yellow-400 text-xs mt-4";
+
+          }
+
 
           try {
-            this.peer.reconnect();
-          } catch (e) {
-            console.error(e);
+
+            if (
+              this.peer &&
+              !this.peer.destroyed
+            ) {
+
+              this.peer.reconnect();
+
+            }
+
+          } catch (error) {
+
+            console.error(error);
+
           }
+
+        });
+
+
+        this.peer.on("close", () => {
+
+          console.warn(
+            "Host Peer closed."
+          );
 
         });
 
@@ -649,26 +954,45 @@ class NetworkEngine {
       }
 
     });
+
   }
 
+
+  /* ==========================================================
+     HOST CONNECTION
+  ========================================================== */
 
   setupHostConnection(conn) {
 
     conn.on("open", () => {
 
-      console.log("Player connection opened:", conn.peer);
+      console.log(
+        "PLAYER CONNECTED:",
+        conn.peer
+      );
 
-      this.connections.set(conn.peer, conn);
+      this.connections.set(
+        conn.peer,
+        conn
+      );
 
     });
 
 
     conn.on("data", data => {
 
-      console.log("Host received:", data);
+      console.log(
+        "HOST RECEIVED:",
+        data
+      );
 
       if (this.onData) {
-        this.onData(data, conn);
+
+        this.onData(
+          data,
+          conn
+        );
+
       }
 
     });
@@ -676,241 +1000,560 @@ class NetworkEngine {
 
     conn.on("close", () => {
 
-      console.log("Player disconnected:", conn.peer);
+      console.log(
+        "PLAYER DISCONNECTED:",
+        conn.peer
+      );
 
-      this.connections.delete(conn.peer);
+      this.connections.delete(
+        conn.peer
+      );
+
+      renderHostRoster();
 
     });
 
 
     conn.on("error", error => {
 
-      console.error("Player connection error:", error);
+      console.error(
+        "PLAYER CONNECTION ERROR:",
+        error
+      );
 
-      this.connections.delete(conn.peer);
-
-    });
-
-  }
-
-
-  broadcast(data) {
-
-    this.connections.forEach((conn, peerId) => {
-
-      try {
-
-        if (conn.open) {
-          conn.send(data);
-        }
-
-      } catch (error) {
-
-        console.error("Broadcast error:", error);
-
-      }
+      this.connections.delete(
+        conn.peer
+      );
 
     });
 
   }
 
 
-  sendTo(peerId, data) {
+  /* ==========================================================
+     CLIENT INITIALIZATION
+  ========================================================== */
 
-    const conn = this.connections.get(peerId);
-
-    if (!conn) {
-      console.warn("No connection for:", peerId);
-      return false;
-    }
-
-    try {
-
-      if (conn.open) {
-
-        conn.send(data);
-        return true;
-
-      }
-
-    } catch (error) {
-
-      console.error("Send error:", error);
-
-    }
-
-    return false;
-  }
-
-
-  /*
-    Client initialization.
-
-    The room code is converted into the exact same PeerJS host ID
-    used by the host.
-  */
-
-  initClient(roomCode, playerId, playerName, callback) {
+  initClient(
+    roomCode,
+    playerId,
+    playerName,
+    hostPeerId,
+    callback
+  ) {
 
     this.isHost = false;
+
     this.onData = callback;
 
-    const cleanRoom = roomCode.trim().toLowerCase();
+    this.hostPeerId = hostPeerId;
 
-    this.hostPeerId = `whispers-dark-${cleanRoom}`;
 
     return new Promise((resolve, reject) => {
+
+      let settled = false;
+
+      let connectionTimeout;
+
 
       try {
 
         /*
-          IMPORTANT:
-
-          The client gets its own random Peer ID.
-
-          This prevents collisions between phones.
+          The CLIENT also receives a random PeerJS ID.
         */
 
         this.peer = new Peer(undefined, {
-          debug: 2
+
+          debug: 2,
+
+          secure: true,
+
+          host: "0.peerjs.com",
+
+          port: 443,
+
+          path: "/",
+
+          config: {
+
+            iceServers: [
+
+              {
+                urls:
+                  "stun:stun.l.google.com:19302"
+              }
+
+            ]
+
+          }
+
         });
 
 
-        this.peer.on("open", clientPeerId => {
+        connectionTimeout =
+          setTimeout(() => {
 
-          console.log("Client Peer connected:", clientPeerId);
+            if (!settled) {
 
-          const conn = this.peer.connect(
-            this.hostPeerId,
-            {
-              reliable: true
-            }
-          );
+              settled = true;
 
-          this.clientConnection = conn;
+              reject(
+                new Error(
+                  "Connection timed out. Make sure the host still has the game open."
+                )
+              );
 
-
-          conn.on("open", () => {
-
-            console.log("Connected to host!");
-
-            conn.send({
-              type: "JOIN_REQUEST",
-              playerId,
-              name: playerName,
-              peerId: clientPeerId
-            });
-
-            resolve(conn);
-
-          });
-
-
-          conn.on("data", data => {
-
-            console.log("Client received:", data);
-
-            if (this.onData) {
-              this.onData(data);
             }
 
-          });
+          }, 15000);
 
 
-          conn.on("close", () => {
+        this.peer.on(
+          "open",
+          clientPeerId => {
 
-            console.warn("Connection to host closed.");
-
-            showJoinStatus(
-              "Connection to host was closed.",
-              false
+            console.log(
+              "CLIENT PEER ID:",
+              clientPeerId
             );
 
-          });
+
+            console.log(
+              "CONNECTING TO HOST:",
+              this.hostPeerId
+            );
 
 
-          conn.on("error", error => {
+            if (!this.hostPeerId) {
 
-            console.error("Client connection error:", error);
+              clearTimeout(
+                connectionTimeout
+              );
 
-            reject(error);
+              if (!settled) {
 
-          });
+                settled = true;
 
-        });
+                reject(
+                  new Error(
+                    "This QR code is missing the host connection information. Create a new game and scan its new QR code."
+                  )
+                );
+
+              }
+
+              return;
+
+            }
 
 
-        this.peer.on("error", error => {
+            const conn =
+              this.peer.connect(
+                this.hostPeerId,
+                {
+                  reliable: true
+                }
+              );
 
-          console.error("Client Peer error:", error);
 
-          let message = "Could not connect to the host.";
+            this.clientConnection =
+              conn;
 
-          if (error.type === "peer-unavailable") {
 
-            message =
-              "Room not found. Make sure the host has the game open and the room code is correct.";
+            conn.on("open", () => {
+
+              console.log(
+                "CONNECTED TO HOST!"
+              );
+
+
+              clearTimeout(
+                connectionTimeout
+              );
+
+
+              conn.send({
+
+                type:
+                  "JOIN_REQUEST",
+
+                playerId,
+
+                name:
+                  playerName,
+
+                peerId:
+                  clientPeerId
+
+              });
+
+
+              if (!settled) {
+
+                settled = true;
+
+                resolve(conn);
+
+              }
+
+            });
+
+
+            conn.on("data", data => {
+
+              console.log(
+                "CLIENT RECEIVED:",
+                data
+              );
+
+
+              if (this.onData) {
+
+                this.onData(data);
+
+              }
+
+            });
+
+
+            conn.on("close", () => {
+
+              console.warn(
+                "Connection to host closed."
+              );
+
+
+              if (
+                document
+                  .getElementById(
+                    "join-view"
+                  )
+                  ?.classList
+                  .contains("hidden")
+              ) {
+
+                return;
+
+              }
+
+
+              showJoinStatus(
+                "The host connection was closed.",
+                false
+              );
+
+            });
+
+
+            conn.on("error", error => {
+
+              console.error(
+                "CLIENT CONNECTION ERROR:",
+                error
+              );
+
+
+              clearTimeout(
+                connectionTimeout
+              );
+
+
+              if (!settled) {
+
+                settled = true;
+
+                reject(
+                  new Error(
+                    this.getPeerErrorMessage(error)
+                  )
+                );
+
+              }
+
+            });
 
           }
+        );
 
-          if (error.type === "network") {
 
-            message =
-              "Network connection problem. Check your internet connection.";
+        this.peer.on(
+          "error",
+          error => {
+
+            console.error(
+              "CLIENT PEER ERROR:",
+              error
+            );
+
+
+            clearTimeout(
+              connectionTimeout
+            );
+
+
+            if (!settled) {
+
+              settled = true;
+
+              reject(
+                new Error(
+                  this.getPeerErrorMessage(error)
+                )
+              );
+
+            }
 
           }
-
-          reject(new Error(message));
-
-        });
+        );
 
 
-        this.peer.on("disconnected", () => {
+        this.peer.on(
+          "disconnected",
+          () => {
 
-          console.warn("Client disconnected from PeerJS.");
+            console.warn(
+              "CLIENT DISCONNECTED FROM PEERJS"
+            );
 
-          try {
-            this.peer.reconnect();
-          } catch (e) {
-            console.error(e);
+
+            try {
+
+              if (
+                this.peer &&
+                !this.peer.destroyed
+              ) {
+
+                this.peer.reconnect();
+
+              }
+
+            } catch (error) {
+
+              console.error(error);
+
+            }
+
           }
-
-        });
+        );
 
       } catch (error) {
+
+        clearTimeout(
+          connectionTimeout
+        );
 
         reject(error);
 
       }
 
     });
+
   }
 
+
+  /* ==========================================================
+     PEER ERROR MESSAGE
+  ========================================================== */
+
+  getPeerErrorMessage(error) {
+
+    if (!error) {
+
+      return "Unknown connection error.";
+
+    }
+
+
+    const type =
+      error.type || "";
+
+
+    if (
+      type === "peer-unavailable"
+    ) {
+
+      return (
+        "The host could not be found. " +
+        "Make sure the host has the game open and use the NEW QR code."
+      );
+
+    }
+
+
+    if (
+      type === "network"
+    ) {
+
+      return (
+        "Network error. Check that this device has internet access."
+      );
+
+    }
+
+
+    if (
+      type === "browser-incompatible"
+    ) {
+
+      return (
+        "This browser does not support the connection required for the game."
+      );
+
+    }
+
+
+    if (
+      type === "ssl-unavailable"
+    ) {
+
+      return (
+        "Secure connection unavailable. Open the game using HTTPS."
+      );
+
+    }
+
+
+    if (
+      type === "server-error"
+    ) {
+
+      return (
+        "The PeerJS connection server returned an error. Try again."
+      );
+
+    }
+
+
+    return (
+      error.message ||
+      `PeerJS error: ${type || "unknown"}`
+    );
+
+  }
+
+
+  /* ==========================================================
+     BROADCAST
+  ========================================================== */
+
+  broadcast(data) {
+
+    this.connections.forEach(
+      (conn, peerId) => {
+
+        try {
+
+          if (conn && conn.open) {
+
+            conn.send(data);
+
+          }
+
+        } catch (error) {
+
+          console.error(
+            "Broadcast error:",
+            error
+          );
+
+        }
+
+      }
+    );
+
+  }
+
+
+  /* ==========================================================
+     SEND TO
+  ========================================================== */
+
+  sendTo(peerId, data) {
+
+    const conn =
+      this.connections.get(peerId);
+
+
+    if (!conn) {
+
+      console.warn(
+        "No connection for:",
+        peerId
+      );
+
+      return false;
+
+    }
+
+
+    try {
+
+      if (conn.open) {
+
+        conn.send(data);
+
+        return true;
+
+      }
+
+    } catch (error) {
+
+      console.error(
+        "Send error:",
+        error
+      );
+
+    }
+
+
+    return false;
+
+  }
+
+
+  /* ==========================================================
+     DESTROY
+  ========================================================== */
 
   destroy() {
 
     try {
 
-      this.connections.forEach(conn => {
+      this.connections.forEach(
+        conn => {
 
-        try {
-          conn.close();
-        } catch {}
+          try {
 
-      });
+            conn.close();
+
+          } catch {}
+
+        }
+      );
+
 
       this.connections.clear();
 
+
       if (this.clientConnection) {
+
         try {
+
           this.clientConnection.close();
+
         } catch {}
+
       }
 
+
       if (this.peer) {
+
         try {
+
           this.peer.destroy();
+
         } catch {}
+
       }
 
     } catch (error) {
@@ -919,18 +1562,24 @@ class NetworkEngine {
 
     }
 
+
     this.peer = null;
+
+    this.clientConnection = null;
+
+    this.hostPeerId = null;
 
   }
 
 }
 
 
-const net = new NetworkEngine();
+const net =
+  new NetworkEngine();
 
 
 /* ============================================================
-   GAME STATE
+   HOST GAME STATE
 ============================================================ */
 
 let hostState = {
@@ -942,9 +1591,13 @@ let hostState = {
   players: {},
 
   roleCounts: {
+
     murderer: 2,
+
     detective: 1,
+
     doctor: 1
+
   },
 
   murdererTarget: null,
@@ -952,8 +1605,6 @@ let hostState = {
   doctorTarget: null,
 
   detectiveTarget: null,
-
-  nightActions: {},
 
   votes: {},
 
@@ -965,6 +1616,10 @@ let hostState = {
 
 };
 
+
+/* ============================================================
+   LOCAL PLAYER
+============================================================ */
 
 let localPlayer = {
 
@@ -986,14 +1641,25 @@ let localPlayer = {
 
 
 /* ============================================================
-   PLAYER ID
+   CURRENT PLAYER LIST
+============================================================ */
+
+let currentPlayers = [];
+
+
+/* ============================================================
+   PERSISTENT PLAYER ID
 ============================================================ */
 
 function getPersistentPlayerId() {
 
-  const key = "whispers-dark-player-id";
+  const key =
+    "whispers-dark-player-id";
 
-  let id = localStorage.getItem(key);
+
+  let id =
+    localStorage.getItem(key);
+
 
   if (!id) {
 
@@ -1001,13 +1667,21 @@ function getPersistentPlayerId() {
       "player-" +
       Date.now() +
       "-" +
-      Math.random().toString(36).substring(2, 10);
+      Math.random()
+        .toString(36)
+        .substring(2, 10);
 
-    localStorage.setItem(key, id);
+
+    localStorage.setItem(
+      key,
+      id
+    );
 
   }
 
+
   return id;
+
 }
 
 
@@ -1015,30 +1689,46 @@ function getPersistentPlayerId() {
    JOIN STATUS
 ============================================================ */
 
-function showJoinStatus(message, success = false) {
+function showJoinStatus(
+  message,
+  success = false
+) {
 
-  const box = document.getElementById("join-status");
+  const box =
+    document.getElementById(
+      "join-status"
+    );
 
-  box.classList.remove("hidden");
+
+  box.classList.remove(
+    "hidden"
+  );
+
 
   box.className =
     "mt-5 rounded-xl p-4 text-center text-sm " +
-    (success
-      ? "bg-green-950/40 text-green-400 border border-green-900/50"
-      : "bg-red-950/40 text-red-400 border border-red-900/50");
+    (
+      success
+        ? "bg-green-950/40 text-green-400 border border-green-900/50"
+        : "bg-red-950/40 text-red-400 border border-red-900/50"
+    );
 
-  box.textContent = message;
+
+  box.textContent =
+    message;
 
 }
 
 
 /* ============================================================
-   HOST
+   CREATE GAME
 ============================================================ */
 
 async function createGame() {
 
-  const roomCode = generateRoomCode();
+  const roomCode =
+    generateRoomCode();
+
 
   hostState = {
 
@@ -1049,9 +1739,13 @@ async function createGame() {
     players: {},
 
     roleCounts: {
+
       murderer: 2,
+
       detective: 1,
+
       doctor: 1
+
     },
 
     murdererTarget: null,
@@ -1059,8 +1753,6 @@ async function createGame() {
     doctorTarget: null,
 
     detectiveTarget: null,
-
-    nightActions: {},
 
     votes: {},
 
@@ -1073,62 +1765,148 @@ async function createGame() {
   };
 
 
-  document.getElementById("host-room-code").textContent =
+  document.getElementById(
+    "host-room-code"
+  ).textContent =
     roomCode;
 
 
   /*
-    Generate QR using the PUBLIC URL.
+    IMPORTANT:
 
-    This is the main mobile joining fix.
+    Start PeerJS FIRST.
+
+    Only after we receive the random host Peer ID do we create
+    the QR code.
   */
 
-  const joinURL = getJoinURL(roomCode);
+  showView(
+    "host-lobby-view"
+  );
 
-  console.log("QR Join URL:", joinURL);
 
-  const qrContainer = document.getElementById("qrcode");
+  const qrContainer =
+    document.getElementById(
+      "qrcode"
+    );
 
-  qrContainer.innerHTML = "";
 
-  new QRCode(qrContainer, {
+  qrContainer.innerHTML = `
 
-    text: joinURL,
+    <div class="w-[220px] h-[220px] flex items-center justify-center text-black text-sm text-center">
 
-    width: 220,
+      <div>
 
-    height: 220,
+        <div class="animate-pulse font-bold">
+          Starting host...
+        </div>
 
-    colorDark: "#000000",
+        <div class="text-xs mt-2 text-zinc-500">
+          Please wait
+        </div>
 
-    colorLight: "#ffffff",
+      </div>
 
-    correctLevel: QRCode.CorrectLevel.H
+    </div>
 
-  });
+  `;
 
 
   try {
 
-    await net.initHost(
-      roomCode,
-      handleHostReceivedData
+    const hostPeerId =
+      await net.initHost(
+        handleHostReceivedData
+      );
+
+
+    /*
+      NOW we know the exact host PeerJS ID.
+    */
+
+    const joinURL =
+      getJoinURL(
+        roomCode,
+        hostPeerId
+      );
+
+
+    console.log(
+      "================================="
     );
 
-    showView("host-lobby-view");
+    console.log(
+      "ROOM:",
+      roomCode
+    );
+
+    console.log(
+      "HOST PEER ID:",
+      hostPeerId
+    );
+
+    console.log(
+      "JOIN URL:",
+      joinURL
+    );
+
+    console.log(
+      "================================="
+    );
+
+
+    qrContainer.innerHTML =
+      "";
+
+
+    new QRCode(
+      qrContainer,
+      {
+
+        text:
+          joinURL,
+
+        width:
+          220,
+
+        height:
+          220,
+
+        colorDark:
+          "#000000",
+
+        colorLight:
+          "#ffffff",
+
+        correctLevel:
+          QRCode.CorrectLevel.H
+
+      }
+    );
+
 
     renderHostRoster();
 
+
   } catch (error) {
 
-    console.error(error);
+    console.error(
+      "CREATE GAME ERROR:",
+      error
+    );
+
 
     alert(
       error.message ||
       "Could not create the game."
     );
 
+
     net.destroy();
+
+    showView(
+      "landing-view"
+    );
 
   }
 
@@ -1136,25 +1914,70 @@ async function createGame() {
 
 
 /* ============================================================
-   HOST RECEIVES DATA
+   HOST RECEIVES ALL DATA
 ============================================================ */
 
-function handleHostReceivedData(data, conn) {
+function handleHostReceivedData(
+  data,
+  conn
+) {
 
-  if (!data || !data.type) return;
+  if (
+    !data ||
+    !data.type
+  ) {
+
+    return;
+
+  }
 
 
-  if (data.type === "JOIN_REQUEST") {
+  /* ==========================================================
+     PLAYER JOIN
+  ========================================================== */
 
-    if (hostState.phase !== "LOBBY") {
+  if (
+    data.type === "JOIN_REQUEST"
+  ) {
 
-      net.sendTo(data.peerId, {
+    if (
+      hostState.phase !== "LOBBY"
+    ) {
 
-        type: "JOIN_ERROR",
+      net.sendTo(
+        conn.peer,
+        {
 
-        message: "The game has already started."
+          type:
+            "JOIN_ERROR",
 
-      });
+          message:
+            "The game has already started."
+
+        }
+      );
+
+      return;
+
+    }
+
+
+    const playerId =
+      String(
+        data.playerId || ""
+      );
+
+
+    const playerName =
+      String(
+        data.name ||
+        "Player"
+      )
+        .trim()
+        .substring(0, 20);
+
+
+    if (!playerId) {
 
       return;
 
@@ -1162,52 +1985,80 @@ function handleHostReceivedData(data, conn) {
 
 
     /*
-      Prevent duplicate player IDs.
+      Check if this player already exists.
     */
 
-    const alreadyExists = Object.values(
-      hostState.players
-    ).some(
-      player => player.id === data.playerId
-    );
+    const existing =
+      Object.values(
+        hostState.players
+      ).find(
+        player =>
+          player.id === playerId
+      );
 
 
-    if (alreadyExists) {
+    if (existing) {
 
-      const existingPlayer =
-        Object.values(hostState.players)
-          .find(p => p.id === data.playerId);
+      existing.peerId =
+        conn.peer;
 
-      if (existingPlayer) {
+      existing.name =
+        playerName;
 
-        existingPlayer.peerId = data.peerId;
 
-      }
+      net.connections.set(
+        conn.peer,
+        conn
+      );
+
+
+      net.sendTo(
+        conn.peer,
+        {
+
+          type:
+            "JOIN_SUCCESS",
+
+          playerId:
+            existing.id
+
+        }
+      );
+
+
+      sendCurrentPlayers(
+        conn
+      );
+
+
+      renderHostRoster();
 
       return;
 
     }
 
 
-    const playerId = data.playerId;
+    hostState.players[
+      playerId
+    ] = {
 
+      id:
+        playerId,
 
-    hostState.players[playerId] = {
-
-      id: playerId,
-
-      peerId: conn.peer,
+      peerId:
+        conn.peer,
 
       name:
-        String(data.name || "Player")
-          .trim()
-          .substring(0, 20),
+        playerName,
 
-      role: null,
+      role:
+        null,
 
-      alive: true,
+      alive:
+        true,
 
-      vote: null
+      vote:
+        null
 
     };
 
@@ -1218,16 +2069,271 @@ function handleHostReceivedData(data, conn) {
     );
 
 
-    net.sendTo(conn.peer, {
+    net.sendTo(
+      conn.peer,
+      {
 
-      type: "JOIN_SUCCESS",
+        type:
+          "JOIN_SUCCESS",
 
-      playerId
+        playerId
 
-    });
+      }
+    );
+
+
+    sendCurrentPlayers(
+      conn
+    );
 
 
     renderHostRoster();
+
+    return;
+
+  }
+
+
+  /* ==========================================================
+     REQUEST PLAYER LIST
+  ========================================================== */
+
+  if (
+    data.type === "REQUEST_PLAYERS"
+  ) {
+
+    sendCurrentPlayers(
+      conn
+    );
+
+    return;
+
+  }
+
+
+  /* ==========================================================
+     NIGHT ACTION
+  ========================================================== */
+
+  if (
+    data.type === "NIGHT_ACTION"
+  ) {
+
+    const player =
+      Object.values(
+        hostState.players
+      ).find(
+        p =>
+          p.peerId === conn.peer
+      );
+
+
+    if (!player || !player.alive) {
+
+      return;
+
+    }
+
+
+    if (
+      hostState.phase !== "NIGHT"
+    ) {
+
+      return;
+
+    }
+
+
+    const target =
+      hostState.players[
+        data.targetId
+      ];
+
+
+    if (
+      !target ||
+      !target.alive
+    ) {
+
+      return;
+
+    }
+
+
+    if (
+      data.action === "murder" &&
+      player.role === "murderer"
+    ) {
+
+      hostState.murdererTarget =
+        data.targetId;
+
+    }
+
+
+    if (
+      data.action === "protect" &&
+      player.role === "doctor"
+    ) {
+
+      hostState.doctorTarget =
+        data.targetId;
+
+    }
+
+
+    if (
+      data.action === "investigate" &&
+      player.role === "detective"
+    ) {
+
+      hostState.detectiveTarget =
+        data.targetId;
+
+
+      net.sendTo(
+        conn.peer,
+        {
+
+          type:
+            "INVESTIGATION_RESULT",
+
+          targetName:
+            target.name,
+
+          isMurderer:
+            target.role === "murderer"
+
+        }
+      );
+
+    }
+
+
+    return;
+
+  }
+
+
+  /* ==========================================================
+     VOTE
+  ========================================================== */
+
+  if (
+    data.type === "VOTE"
+  ) {
+
+    const player =
+      Object.values(
+        hostState.players
+      ).find(
+        p =>
+          p.peerId === conn.peer
+      );
+
+
+    if (
+      !player ||
+      !player.alive
+    ) {
+
+      return;
+
+    }
+
+
+    if (
+      hostState.phase !== "DAY_VOTE"
+    ) {
+
+      return;
+
+    }
+
+
+    const target =
+      hostState.players[
+        data.targetId
+      ];
+
+
+    if (
+      !target ||
+      !target.alive ||
+      target.id === player.id
+    ) {
+
+      return;
+
+    }
+
+
+    player.vote =
+      target.id;
+
+
+    renderHostGame();
+
+    return;
+
+  }
+
+}
+
+
+/* ============================================================
+   SEND CURRENT PLAYERS
+============================================================ */
+
+function sendCurrentPlayers(
+  conn
+) {
+
+  if (
+    !conn ||
+    !conn.open
+  ) {
+
+    return;
+
+  }
+
+
+  const players =
+    Object.values(
+      hostState.players
+    )
+      .map(player => ({
+
+        id:
+          player.id,
+
+        name:
+          player.name,
+
+        alive:
+          player.alive
+
+      }));
+
+
+  try {
+
+    conn.send({
+
+      type:
+        "PLAYER_LIST",
+
+      players
+
+    });
+
+  } catch (error) {
+
+    console.error(
+      "PLAYER LIST SEND ERROR:",
+      error
+    );
 
   }
 
@@ -1241,66 +2347,107 @@ function handleHostReceivedData(data, conn) {
 function renderHostRoster() {
 
   const roster =
-    document.getElementById("host-roster");
+    document.getElementById(
+      "host-roster"
+    );
+
 
   const empty =
-    document.getElementById("host-empty");
+    document.getElementById(
+      "host-empty"
+    );
+
 
   const count =
-    document.getElementById("host-player-count");
+    document.getElementById(
+      "host-player-count"
+    );
 
 
   const players =
-    Object.values(hostState.players);
+    Object.values(
+      hostState.players
+    );
 
 
   count.textContent =
-    `${players.length} player${players.length === 1 ? "" : "s"}`;
+    `${players.length} player${
+      players.length === 1
+        ? ""
+        : "s"
+    }`;
 
 
-  if (players.length === 0) {
+  if (
+    players.length === 0
+  ) {
 
-    roster.innerHTML = "";
+    roster.innerHTML =
+      "";
 
-    empty.classList.remove("hidden");
+    empty.classList.remove(
+      "hidden"
+    );
 
     return;
 
   }
 
 
-  empty.classList.add("hidden");
+  empty.classList.add(
+    "hidden"
+  );
 
 
-  roster.innerHTML = players.map((player, index) => {
+  roster.innerHTML =
+    players
+      .map(
+        (player, index) => {
 
-    return `
-      <div class="flex items-center justify-between rounded-2xl bg-black/30 border border-zinc-800 p-4 fade-in">
+          return `
 
-        <div class="flex items-center gap-4">
+            <div class="flex items-center justify-between rounded-2xl bg-black/30 border border-zinc-800 p-4 fade-in">
 
-          <div class="w-10 h-10 rounded-full bg-red-950/50 flex items-center justify-center font-black text-red-400">
-            ${index + 1}
-          </div>
+              <div class="flex items-center gap-4">
 
-          <div>
-            <p class="font-bold">
-              ${escapeHTML(player.name)}
-            </p>
+                <div class="w-10 h-10 rounded-full bg-red-950/50 flex items-center justify-center font-black text-red-400">
 
-            <p class="text-xs text-zinc-600">
-              Connected
-            </p>
-          </div>
+                  ${index + 1}
 
-        </div>
+                </div>
 
-        <i data-lucide="wifi" class="w-4 h-4 text-green-500"></i>
+                <div>
 
-      </div>
-    `;
+                  <p class="font-bold">
 
-  }).join("");
+                    ${escapeHTML(
+                      player.name
+                    )}
+
+                  </p>
+
+                  <p class="text-xs text-green-500">
+
+                    Connected
+
+                  </p>
+
+                </div>
+
+              </div>
+
+              <i
+                data-lucide="wifi"
+                class="w-4 h-4 text-green-500"
+              ></i>
+
+            </div>
+
+          `;
+
+        }
+      )
+      .join("");
 
 
   lucide.createIcons();
@@ -1315,14 +2462,14 @@ function renderHostRoster() {
 function startGame() {
 
   const players =
-    Object.values(hostState.players);
+    Object.values(
+      hostState.players
+    );
 
 
-  const playerCount =
-    players.length;
-
-
-  if (playerCount < 4) {
+  if (
+    players.length < 4
+  ) {
 
     alert(
       "You need at least 4 players to start the game."
@@ -1333,122 +2480,175 @@ function startGame() {
   }
 
 
-  /*
-    Automatically adjust role counts for smaller games.
-  */
-
-  let murdererCount = 2;
-
-  if (playerCount <= 5) {
-    murdererCount = 1;
-  }
-
-  if (playerCount >= 8) {
-    murdererCount = 2;
-  }
+  let murdererCount =
+    players.length <= 5
+      ? 1
+      : 2;
 
 
   hostState.roleCounts = {
 
-    murderer: murdererCount,
+    murderer:
+      murdererCount,
 
-    detective: 1,
+    detective:
+      1,
 
-    doctor: 1
+    doctor:
+      1
 
   };
 
 
   /*
-    Assign roles randomly.
+    Shuffle players.
   */
 
   const shuffled =
     [...players].sort(
-      () => Math.random() - 0.5
+      () =>
+        Math.random() - 0.5
     );
 
 
-  let roleIndex = 0;
+  let roleIndex =
+    0;
 
+
+  /*
+    Murderers.
+  */
 
   for (
     let i = 0;
-    i < hostState.roleCounts.murderer;
+    i < murdererCount;
     i++
   ) {
 
-    shuffled[roleIndex++].role =
+    shuffled[
+      roleIndex++
+    ].role =
       "murderer";
 
   }
 
 
-  shuffled[roleIndex++].role =
+  /*
+    Detective.
+  */
+
+  shuffled[
+    roleIndex++
+  ].role =
     "detective";
 
 
-  shuffled[roleIndex++].role =
+  /*
+    Doctor.
+  */
+
+  shuffled[
+    roleIndex++
+  ].role =
     "doctor";
 
 
-  while (roleIndex < shuffled.length) {
+  /*
+    Innocents.
+  */
 
-    shuffled[roleIndex++].role =
+  while (
+    roleIndex <
+    shuffled.length
+  ) {
+
+    shuffled[
+      roleIndex++
+    ].role =
       "innocent";
 
   }
 
 
   /*
-    Send each player their private role.
+    Reset state.
   */
 
-  players.forEach(player => {
+  hostState.murdererTarget =
+    null;
 
-    net.sendTo(
-      player.peerId,
-      {
+  hostState.doctorTarget =
+    null;
 
-        type: "ROLE_ASSIGNMENT",
-
-        role: player.role,
-
-        description:
-          ROLE_DESCRIPTIONS[player.role]
-
-      }
-    );
-
-  });
+  hostState.detectiveTarget =
+    null;
 
 
-  hostState.phase = "NIGHT";
+  /*
+    Send private roles.
+  */
 
-  showView("host-game-view");
+  players.forEach(
+    player => {
+
+      net.sendTo(
+        player.peerId,
+        {
+
+          type:
+            "ROLE_ASSIGNMENT",
+
+          role:
+            player.role,
+
+          description:
+            ROLE_DESCRIPTIONS[
+              player.role
+            ]
+
+        }
+      );
+
+    }
+  );
+
+
+  hostState.phase =
+    "NIGHT";
+
+
+  showView(
+    "host-game-view"
+  );
+
 
   renderHostGame();
 
   broadcastPhase();
 
-  startHostTimer(45);
+  startHostTimer(
+    45
+  );
 
 }
 
 
 /* ============================================================
-   PHASE BROADCAST
+   BROADCAST PHASE
 ============================================================ */
 
 function broadcastPhase() {
 
   net.broadcast({
 
-    type: "PHASE_CHANGE",
+    type:
+      "PHASE_CHANGE",
 
-    phase: hostState.phase,
+    phase:
+      hostState.phase,
 
-    timerSeconds: hostState.timerSeconds
+    timerSeconds:
+      hostState.timerSeconds
 
   });
 
@@ -1456,56 +2656,74 @@ function broadcastPhase() {
 
 
 /* ============================================================
-   HOST TIMER
+   TIMER
 ============================================================ */
 
-function startHostTimer(seconds) {
+function startHostTimer(
+  seconds
+) {
 
-  clearInterval(hostState.timer);
+  clearInterval(
+    hostState.timer
+  );
 
-  hostState.timerSeconds = seconds;
+
+  hostState.timerSeconds =
+    seconds;
+
 
   updateTimers();
 
 
   hostState.timer =
-    setInterval(() => {
+    setInterval(
+      () => {
 
-      hostState.timerSeconds--;
+        hostState.timerSeconds--;
 
-      updateTimers();
+        updateTimers();
 
 
-      if (hostState.timerSeconds <= 0) {
+        if (
+          hostState.timerSeconds <= 0
+        ) {
 
-        clearInterval(hostState.timer);
+          clearInterval(
+            hostState.timer
+          );
 
-        hostState.timer = null;
+          hostState.timer =
+            null;
 
-        advancePhase();
+          advancePhase();
 
-      }
+        }
 
-    }, 1000);
+      },
+      1000
+    );
 
 }
 
 
 /* ============================================================
-   TIMER DISPLAY
+   UPDATE TIMERS
 ============================================================ */
 
 function updateTimers() {
 
   const value =
     hostState.timerSeconds > 0
-      ? formatTime(hostState.timerSeconds)
+      ? formatTime(
+          hostState.timerSeconds
+        )
       : "--";
 
 
   document.getElementById(
     "host-timer"
-  ).textContent = value;
+  ).textContent =
+    value;
 
 
   document.getElementById(
@@ -1516,15 +2734,23 @@ function updateTimers() {
 }
 
 
-function formatTime(seconds) {
+function formatTime(
+  seconds
+) {
 
   const mins =
-    Math.floor(seconds / 60);
+    Math.floor(
+      seconds / 60
+    );
+
 
   const secs =
     seconds % 60;
 
-  return `${mins}:${String(secs).padStart(2, "0")}`;
+
+  return `${mins}:${String(
+    secs
+  ).padStart(2, "0")}`;
 
 }
 
@@ -1535,10 +2761,14 @@ function formatTime(seconds) {
 
 function advancePhase() {
 
-  clearInterval(hostState.timer);
+  clearInterval(
+    hostState.timer
+  );
 
 
-  if (hostState.phase === "NIGHT") {
+  if (
+    hostState.phase === "NIGHT"
+  ) {
 
     resolveNight();
 
@@ -1547,7 +2777,9 @@ function advancePhase() {
   }
 
 
-  if (hostState.phase === "DAY_VOTE") {
+  if (
+    hostState.phase === "DAY_VOTE"
+  ) {
 
     resolveVote();
 
@@ -1559,12 +2791,12 @@ function advancePhase() {
 
 
 /* ============================================================
-   NIGHT RESOLUTION
+   RESOLVE NIGHT
 ============================================================ */
 
 function resolveNight() {
 
-  let killedPlayerId =
+  const killedPlayerId =
     hostState.murdererTarget;
 
 
@@ -1572,7 +2804,8 @@ function resolveNight() {
     hostState.doctorTarget;
 
 
-  let killed = null;
+  let killed =
+    null;
 
 
   if (
@@ -1581,13 +2814,54 @@ function resolveNight() {
   ) {
 
     killed =
-      hostState.players[killedPlayerId];
+      hostState.players[
+        killedPlayerId
+      ];
+
 
     if (killed) {
 
-      killed.alive = false;
+      killed.alive =
+        false;
 
     }
+
+  }
+
+
+  /*
+    Check if the game is already over.
+  */
+
+  const winner =
+    checkWinner();
+
+
+  if (winner) {
+
+    net.broadcast({
+
+      type:
+        "NIGHT_RESULT",
+
+      killedPlayerId:
+        killed
+          ? killed.id
+          : null,
+
+      killedName:
+        killed
+          ? killed.name
+          : null
+
+    });
+
+
+    endGame(
+      winner
+    );
+
+    return;
 
   }
 
@@ -1601,25 +2875,29 @@ function resolveNight() {
 
   net.broadcast({
 
-    type: "NIGHT_RESULT",
+    type:
+      "NIGHT_RESULT",
 
     killedPlayerId:
-      killed ? killed.id : null,
+      killed
+        ? killed.id
+        : null,
 
     killedName:
-      killed ? killed.name : null
+      killed
+        ? killed.name
+        : null
 
   });
 
 
   broadcastPhase();
 
-
 }
 
 
 /* ============================================================
-   OPEN DAY VOTING
+   OPEN VOTING
 ============================================================ */
 
 function openVoting() {
@@ -1628,106 +2906,163 @@ function openVoting() {
     "DAY_VOTE";
 
 
-  hostState.votes = {};
+  hostState.votes =
+    {};
 
 
   Object.values(
     hostState.players
-  ).forEach(player => {
+  )
+    .forEach(
+      player => {
 
-    player.vote = null;
+        player.vote =
+          null;
 
-  });
+      }
+    );
 
 
   renderHostGame();
 
   broadcastPhase();
 
-  startHostTimer(60);
+  startHostTimer(
+    60
+  );
 
 }
 
 
 /* ============================================================
-   VOTE RESOLUTION
+   RESOLVE VOTE
 ============================================================ */
 
 function resolveVote() {
 
-  const voteCounts = {};
+  const voteCounts =
+    {};
 
 
   Object.values(
     hostState.players
-  ).forEach(player => {
+  )
+    .forEach(
+      player => {
 
-    if (
-      player.alive &&
-      player.vote
-    ) {
+        if (
+          player.alive &&
+          player.vote
+        ) {
 
-      voteCounts[player.vote] =
-        (voteCounts[player.vote] || 0) + 1;
+          voteCounts[
+            player.vote
+          ] =
+            (
+              voteCounts[
+                player.vote
+              ] || 0
+            ) + 1;
 
-    }
+        }
 
-  });
+      }
+    );
 
 
-  let eliminatedId = null;
+  let eliminatedId =
+    null;
 
-  let highest = 0;
 
-  let tied = false;
+  let highest =
+    0;
+
+
+  let tied =
+    false;
 
 
   Object.entries(
     voteCounts
-  ).forEach(([id, votes]) => {
+  )
+    .forEach(
+      ([id, votes]) => {
 
-    if (votes > highest) {
+        if (
+          votes > highest
+        ) {
 
-      highest = votes;
+          highest =
+            votes;
 
-      eliminatedId = id;
+          eliminatedId =
+            id;
 
-      tied = false;
+          tied =
+            false;
 
-    } else if (
-      votes === highest &&
-      votes > 0
-    ) {
+        } else if (
+          votes === highest &&
+          votes > 0
+        ) {
 
-      tied = true;
+          tied =
+            true;
 
-    }
+        }
 
-  });
+      }
+    );
 
 
   if (tied) {
 
-    eliminatedId = null;
+    eliminatedId =
+      null;
 
   }
 
 
-  let eliminated = null;
+  let eliminated =
+    null;
 
 
-  if (eliminatedId) {
+  if (
+    eliminatedId
+  ) {
 
     eliminated =
-      hostState.players[eliminatedId];
+      hostState.players[
+        eliminatedId
+      ];
+
 
     if (eliminated) {
 
-      eliminated.alive = false;
+      eliminated.alive =
+        false;
 
     }
 
   }
+
+
+  net.broadcast({
+
+    type:
+      "VOTE_RESULT",
+
+    eliminatedId:
+      eliminated
+        ? eliminated.id
+        : null,
+
+    eliminatedName:
+      eliminated
+        ? eliminated.name
+        : null
+
+  });
 
 
   const winner =
@@ -1736,7 +3071,9 @@ function resolveVote() {
 
   if (winner) {
 
-    endGame(winner);
+    endGame(
+      winner
+    );
 
     return;
 
@@ -1747,40 +3084,36 @@ function resolveVote() {
     "NIGHT";
 
 
-  hostState.murdererTarget = null;
+  hostState.murdererTarget =
+    null;
 
-  hostState.doctorTarget = null;
+  hostState.doctorTarget =
+    null;
 
-  hostState.detectiveTarget = null;
+  hostState.detectiveTarget =
+    null;
 
 
   Object.values(
     hostState.players
-  ).forEach(player => {
+  )
+    .forEach(
+      player => {
 
-    player.vote = null;
+        player.vote =
+          null;
 
-  });
-
-
-  net.broadcast({
-
-    type: "VOTE_RESULT",
-
-    eliminatedId:
-      eliminated ? eliminated.id : null,
-
-    eliminatedName:
-      eliminated ? eliminated.name : null
-
-  });
+      }
+    );
 
 
   renderHostGame();
 
   broadcastPhase();
 
-  startHostTimer(45);
+  startHostTimer(
+    45
+  );
 
 }
 
@@ -1792,7 +3125,9 @@ function resolveVote() {
 function checkWinner() {
 
   const players =
-    Object.values(hostState.players);
+    Object.values(
+      hostState.players
+    );
 
 
   const murderers =
@@ -1811,14 +3146,18 @@ function checkWinner() {
     ).length;
 
 
-  if (murderers === 0) {
+  if (
+    murderers === 0
+  ) {
 
     return "innocents";
 
   }
 
 
-  if (murderers >= others) {
+  if (
+    murderers >= others
+  ) {
 
     return "murderers";
 
@@ -1834,11 +3173,18 @@ function checkWinner() {
    END GAME
 ============================================================ */
 
-function endGame(winner) {
+function endGame(
+  winner
+) {
 
-  clearInterval(hostState.timer);
+  clearInterval(
+    hostState.timer
+  );
 
-  hostState.winner = winner;
+
+  hostState.winner =
+    winner;
+
 
   hostState.phase =
     "GAME_OVER";
@@ -1846,24 +3192,38 @@ function endGame(winner) {
 
   net.broadcast({
 
-    type: "GAME_OVER",
+    type:
+      "GAME_OVER",
 
     winner,
 
     players:
-      Object.values(hostState.players)
-        .map(player => ({
-          name: player.name,
-          role: player.role,
-          alive: player.alive
-        }))
+      Object.values(
+        hostState.players
+      )
+        .map(
+          player => ({
+
+            name:
+              player.name,
+
+            role:
+              player.role,
+
+            alive:
+              player.alive
+
+          })
+        )
 
   });
 
 
   showGameOver(
     winner,
-    Object.values(hostState.players)
+    Object.values(
+      hostState.players
+    )
   );
 
 }
@@ -1884,10 +3244,12 @@ function renderHostGame() {
       "host-phase-label"
     );
 
+
   const title =
     document.getElementById(
       "host-phase-title"
     );
+
 
   const content =
     document.getElementById(
@@ -1895,18 +3257,26 @@ function renderHostGame() {
     );
 
 
-  if (phase === "NIGHT") {
+  if (
+    phase === "NIGHT"
+  ) {
 
-    label.textContent = "Night";
+    label.textContent =
+      "Night";
+
 
     title.textContent =
       "The Night Begins";
 
 
     content.innerHTML = `
+
       <div class="text-center py-12">
 
-        <i data-lucide="moon" class="w-14 h-14 mx-auto text-red-500 mb-5"></i>
+        <i
+          data-lucide="moon"
+          class="w-14 h-14 mx-auto text-red-500 mb-5"
+        ></i>
 
         <h3 class="text-2xl font-bold">
           Night actions are happening
@@ -1917,23 +3287,32 @@ function renderHostGame() {
         </p>
 
       </div>
+
     `;
 
   }
 
 
-  else if (phase === "DAY_REVEAL") {
+  else if (
+    phase === "DAY_REVEAL"
+  ) {
 
-    label.textContent = "Day";
+    label.textContent =
+      "Day";
+
 
     title.textContent =
       "Morning Has Come";
 
 
     content.innerHTML = `
+
       <div class="text-center py-10">
 
-        <i data-lucide="sunrise" class="w-14 h-14 mx-auto text-yellow-400 mb-5"></i>
+        <i
+          data-lucide="sunrise"
+          class="w-14 h-14 mx-auto text-yellow-400 mb-5"
+        ></i>
 
         <h3 class="text-2xl font-bold">
           Reveal the night result
@@ -1951,18 +3330,25 @@ function renderHostGame() {
         </button>
 
       </div>
+
     `;
+
 
     document.getElementById(
       "btn-open-voting"
-    ).onclick = openVoting;
+    ).onclick =
+      openVoting;
 
   }
 
 
-  else if (phase === "DAY_VOTE") {
+  else if (
+    phase === "DAY_VOTE"
+  ) {
 
-    label.textContent = "Day Vote";
+    label.textContent =
+      "Day Vote";
+
 
     title.textContent =
       "Who Do You Suspect?";
@@ -1975,9 +3361,13 @@ function renderHostGame() {
 
 
     content.innerHTML = `
+
       <div class="text-center mb-6">
 
-        <i data-lucide="vote" class="w-12 h-12 mx-auto text-red-500 mb-4"></i>
+        <i
+          data-lucide="vote"
+          class="w-12 h-12 mx-auto text-red-500 mb-4"
+        ></i>
 
         <h3 class="text-2xl font-bold">
           Voting is open
@@ -1990,24 +3380,49 @@ function renderHostGame() {
       </div>
 
       <div class="space-y-3">
-        ${players.map(player => `
-          <div class="flex items-center justify-between rounded-xl bg-black/30 border border-zinc-800 p-4">
 
-            <span class="${player.alive ? "" : "line-through text-zinc-600"}">
-              ${escapeHTML(player.name)}
-            </span>
+        ${players.map(
+          player => `
 
-            <span class="text-sm text-zinc-500">
-              ${
-                Object.values(hostState.players)
-                  .filter(p => p.vote === player.id)
-                  .length
-              } vote(s)
-            </span>
+            <div class="flex items-center justify-between rounded-xl bg-black/30 border border-zinc-800 p-4">
 
-          </div>
-        `).join("")}
+              <span class="${
+                player.alive
+                  ? ""
+                  : "line-through text-zinc-600"
+              }">
+
+                ${escapeHTML(
+                  player.name
+                )}
+
+              </span>
+
+              <span class="text-sm text-zinc-500">
+
+                ${
+                  Object.values(
+                    hostState.players
+                  )
+                    .filter(
+                      p =>
+                        p.vote ===
+                        player.id
+                    )
+                    .length
+                }
+
+                vote(s)
+
+              </span>
+
+            </div>
+
+          `
+        ).join("")}
+
       </div>
+
     `;
 
   }
@@ -2019,34 +3434,61 @@ function renderHostGame() {
 
 
 /* ============================================================
-   PLAYER RECEIVES DATA
+   CLIENT RECEIVES DATA
 ============================================================ */
 
-function handleClientReceivedData(data) {
+function handleClientReceivedData(
+  data
+) {
 
-  if (!data || !data.type) return;
+  if (
+    !data ||
+    !data.type
+  ) {
+
+    return;
+
+  }
 
 
-  if (data.type === "JOIN_SUCCESS") {
+  /* JOIN SUCCESS */
+
+  if (
+    data.type === "JOIN_SUCCESS"
+  ) {
 
     localPlayer.id =
       data.playerId;
+
 
     showJoinStatus(
       "Connected! Waiting for the host...",
       true
     );
 
-    setTimeout(() => {
 
-      showView("player-view");
+    setTimeout(
+      () => {
 
-    }, 600);
+        showView(
+          "player-view"
+        );
+
+      },
+      400
+    );
+
+
+    return;
 
   }
 
 
-  if (data.type === "JOIN_ERROR") {
+  /* JOIN ERROR */
+
+  if (
+    data.type === "JOIN_ERROR"
+  ) {
 
     showJoinStatus(
       data.message ||
@@ -2054,62 +3496,188 @@ function handleClientReceivedData(data) {
       false
     );
 
+    return;
+
   }
 
 
-  if (data.type === "ROLE_ASSIGNMENT") {
+  /* ROLE */
+
+  if (
+    data.type === "ROLE_ASSIGNMENT"
+  ) {
 
     localPlayer.role =
       data.role;
 
-    localPlayer.alive = true;
 
-    localPlayer.hasSubmittedNightAction = false;
+    localPlayer.alive =
+      true;
+
+
+    localPlayer.hasSubmittedNightAction =
+      false;
+
 
     renderPlayerRole();
+
+    return;
 
   }
 
 
-  if (data.type === "PHASE_CHANGE") {
+  /* PLAYER LIST */
+
+  if (
+    data.type === "PLAYER_LIST"
+  ) {
+
+    currentPlayers =
+      Array.isArray(
+        data.players
+      )
+        ? data.players
+        : [];
+
+
+    renderTargetButtons(
+      currentPlayers
+    );
+
+
+    return;
+
+  }
+
+
+  /* PHASE */
+
+  if (
+    data.type === "PHASE_CHANGE"
+  ) {
+
+    if (
+      typeof data.timerSeconds ===
+      "number"
+    ) {
+
+      hostState.timerSeconds =
+        data.timerSeconds;
+
+      updateTimers();
+
+    }
+
 
     setPlayerPhase(
       data.phase
     );
 
+
+    return;
+
   }
 
 
-  if (data.type === "NIGHT_RESULT") {
+  /* NIGHT RESULT */
+
+  if (
+    data.type === "NIGHT_RESULT"
+  ) {
+
+    if (
+      data.killedPlayerId ===
+      localPlayer.id
+    ) {
+
+      localPlayer.alive =
+        false;
+
+    }
+
 
     renderNightResult(
       data
     );
 
+
+    return;
+
   }
 
 
-  if (data.type === "VOTE_RESULT") {
+  /* INVESTIGATION */
+
+  if (
+    data.type ===
+    "INVESTIGATION_RESULT"
+  ) {
+
+    handleInvestigationResult(
+      data
+    );
+
+
+    return;
+
+  }
+
+
+  /* VOTE RESULT */
+
+  if (
+    data.type === "VOTE_RESULT"
+  ) {
+
+    if (
+      data.eliminatedId ===
+      localPlayer.id
+    ) {
+
+      localPlayer.alive =
+        false;
+
+    }
+
 
     renderVoteResult(
       data
     );
 
+
+    return;
+
   }
 
 
-  if (data.type === "GAME_OVER") {
+  /* GAME OVER */
 
-    localPlayer.alive =
+  if (
+    data.type === "GAME_OVER"
+  ) {
+
+    const me =
       data.players.find(
-        p => p.name === localPlayer.name
-      )?.alive ?? localPlayer.alive;
+        p =>
+          p.name ===
+          localPlayer.name
+      );
+
+
+    if (me) {
+
+      localPlayer.alive =
+        me.alive;
+
+    }
 
 
     showGameOver(
       data.winner,
       data.players
     );
+
+    return;
 
   }
 
@@ -2127,16 +3695,20 @@ function renderPlayerRole() {
       "player-role-name"
     );
 
+
   const description =
     document.getElementById(
       "player-role-description"
     );
 
 
-  if (!localPlayer.role) {
+  if (
+    !localPlayer.role
+  ) {
 
     roleName.textContent =
       "Waiting...";
+
 
     description.textContent =
       "The host has not started the game yet.";
@@ -2164,12 +3736,17 @@ function renderPlayerRole() {
    PLAYER PHASE
 ============================================================ */
 
-function setPlayerPhase(phase) {
+function setPlayerPhase(
+  phase
+) {
 
   document.getElementById(
     "player-phase-label"
   ).textContent =
-    phase.replace("_", " ");
+    phase.replaceAll(
+      "_",
+      " "
+    );
 
 
   const title =
@@ -2178,10 +3755,16 @@ function setPlayerPhase(phase) {
     );
 
 
-  if (phase === "NIGHT") {
+  if (
+    phase === "NIGHT"
+  ) {
 
     title.textContent =
       "Night";
+
+
+    localPlayer.hasSubmittedNightAction =
+      false;
 
 
     renderPlayerNight();
@@ -2189,7 +3772,9 @@ function setPlayerPhase(phase) {
   }
 
 
-  else if (phase === "DAY_REVEAL") {
+  else if (
+    phase === "DAY_REVEAL"
+  ) {
 
     title.textContent =
       "Morning";
@@ -2198,25 +3783,32 @@ function setPlayerPhase(phase) {
     document.getElementById(
       "player-content"
     ).innerHTML = `
+
       <div class="text-center py-10">
 
-        <i data-lucide="sunrise" class="w-12 h-12 mx-auto text-yellow-400 mb-4"></i>
+        <i
+          data-lucide="sunrise"
+          class="w-12 h-12 mx-auto text-yellow-400 mb-4"
+        ></i>
 
         <h3 class="text-2xl font-bold">
-          Waiting for the night result...
+          Morning
         </h3>
 
         <p class="text-zinc-500 mt-2">
-          Listen to the host.
+          Listen to the host for the night result.
         </p>
 
       </div>
+
     `;
 
   }
 
 
-  else if (phase === "DAY_VOTE") {
+  else if (
+    phase === "DAY_VOTE"
+  ) {
 
     title.textContent =
       "Vote";
@@ -2224,6 +3816,7 @@ function setPlayerPhase(phase) {
 
     localPlayer.hasVoted =
       false;
+
 
     renderPlayerVoting();
 
@@ -2247,12 +3840,18 @@ function renderPlayerNight() {
     );
 
 
-  if (!localPlayer.alive) {
+  if (
+    !localPlayer.alive
+  ) {
 
     content.innerHTML = `
+
       <div class="text-center py-10">
 
-        <i data-lucide="ghost" class="w-12 h-12 mx-auto text-zinc-600 mb-4"></i>
+        <i
+          data-lucide="ghost"
+          class="w-12 h-12 mx-auto text-zinc-600 mb-4"
+        ></i>
 
         <h3 class="text-xl font-bold">
           You are out of the game
@@ -2263,7 +3862,9 @@ function renderPlayerNight() {
         </p>
 
       </div>
+
     `;
+
 
     lucide.createIcons();
 
@@ -2273,7 +3874,8 @@ function renderPlayerNight() {
 
 
   if (
-    localPlayer.role === "murderer"
+    localPlayer.role ===
+    "murderer"
   ) {
 
     renderMurdererAction();
@@ -2281,7 +3883,8 @@ function renderPlayerNight() {
   }
 
   else if (
-    localPlayer.role === "doctor"
+    localPlayer.role ===
+    "doctor"
   ) {
 
     renderDoctorAction();
@@ -2289,7 +3892,8 @@ function renderPlayerNight() {
   }
 
   else if (
-    localPlayer.role === "detective"
+    localPlayer.role ===
+    "detective"
   ) {
 
     renderDetectiveAction();
@@ -2299,9 +3903,13 @@ function renderPlayerNight() {
   else {
 
     content.innerHTML = `
+
       <div class="text-center py-10">
 
-        <i data-lucide="moon" class="w-12 h-12 mx-auto text-zinc-600 mb-4"></i>
+        <i
+          data-lucide="moon"
+          class="w-12 h-12 mx-auto text-zinc-600 mb-4"
+        ></i>
 
         <h3 class="text-xl font-bold">
           Stay quiet...
@@ -2312,6 +3920,7 @@ function renderPlayerNight() {
         </p>
 
       </div>
+
     `;
 
   }
@@ -2323,93 +3932,33 @@ function renderPlayerNight() {
 
 
 /* ============================================================
-   NIGHT TARGET UI
+   REQUEST PLAYERS
 ============================================================ */
-
-function alivePlayers(excludeSelf = false) {
-
-  /*
-    We don't receive the complete roster from the host during
-    normal gameplay, so actions are populated when the host
-    sends the current player list.
-
-    This fallback keeps the interface safe.
-  */
-
-  return [];
-
-}
-
-
-/*
-  The host can send current player choices when needed.
-*/
 
 function requestTargets() {
 
-  if (!net.clientConnection) return;
-
-  net.clientConnection.send({
-    type: "REQUEST_PLAYERS"
-  });
-
-}
-
-
-/* ============================================================
-   ACTION HELPERS
-============================================================ */
-
-function sendNightAction(type, targetId) {
-
   if (
     !net.clientConnection ||
-    localPlayer.hasSubmittedNightAction
+    !net.clientConnection.open
   ) {
+
     return;
+
   }
 
 
-  localPlayer.hasSubmittedNightAction =
-    true;
-
-
   net.clientConnection.send({
 
-    type: "NIGHT_ACTION",
-
-    action: type,
-
-    targetId
+    type:
+      "REQUEST_PLAYERS"
 
   });
-
-
-  document.getElementById(
-    "player-content"
-  ).innerHTML = `
-    <div class="text-center py-10">
-
-      <i data-lucide="check-circle" class="w-12 h-12 mx-auto text-green-500 mb-4"></i>
-
-      <h3 class="text-xl font-bold">
-        Action submitted
-      </h3>
-
-      <p class="text-zinc-500 mt-2">
-        Waiting for the other players...
-      </p>
-
-    </div>
-  `;
-
-  lucide.createIcons();
 
 }
 
 
 /* ============================================================
-   MURDERER
+   MURDERER ACTION
 ============================================================ */
 
 function renderMurdererAction() {
@@ -2421,38 +3970,45 @@ function renderMurdererAction() {
 
 
   content.innerHTML = `
+
     <div class="text-center">
 
-      <i data-lucide="skull" class="w-12 h-12 mx-auto text-red-500 mb-4"></i>
+      <i
+        data-lucide="skull"
+        class="w-12 h-12 mx-auto text-red-500 mb-4"
+      ></i>
 
       <h3 class="text-2xl font-bold">
         Choose your target
       </h3>
 
       <p class="text-zinc-500 mt-2">
-        Select a player to eliminate.
+        Select a player.
       </p>
 
       <div
         id="night-target-list"
         class="grid gap-3 mt-6"
       >
+
         <button
           onclick="requestTargets()"
           class="rounded-xl bg-zinc-800 hover:bg-zinc-700 py-4 font-semibold"
         >
           Load Players
         </button>
+
       </div>
 
     </div>
+
   `;
 
 }
 
 
 /* ============================================================
-   DOCTOR
+   DOCTOR ACTION
 ============================================================ */
 
 function renderDoctorAction() {
@@ -2464,9 +4020,13 @@ function renderDoctorAction() {
 
 
   content.innerHTML = `
+
     <div class="text-center">
 
-      <i data-lucide="heart-pulse" class="w-12 h-12 mx-auto text-green-500 mb-4"></i>
+      <i
+        data-lucide="heart-pulse"
+        class="w-12 h-12 mx-auto text-green-500 mb-4"
+      ></i>
 
       <h3 class="text-2xl font-bold">
         Choose someone to protect
@@ -2480,22 +4040,25 @@ function renderDoctorAction() {
         id="night-target-list"
         class="grid gap-3 mt-6"
       >
+
         <button
           onclick="requestTargets()"
           class="rounded-xl bg-zinc-800 hover:bg-zinc-700 py-4 font-semibold"
         >
           Load Players
         </button>
+
       </div>
 
     </div>
+
   `;
 
 }
 
 
 /* ============================================================
-   DETECTIVE
+   DETECTIVE ACTION
 ============================================================ */
 
 function renderDetectiveAction() {
@@ -2507,9 +4070,13 @@ function renderDetectiveAction() {
 
 
   content.innerHTML = `
+
     <div class="text-center">
 
-      <i data-lucide="search" class="w-12 h-12 mx-auto text-blue-400 mb-4"></i>
+      <i
+        data-lucide="search"
+        class="w-12 h-12 mx-auto text-blue-400 mb-4"
+      ></i>
 
       <h3 class="text-2xl font-bold">
         Investigate a player
@@ -2523,16 +4090,243 @@ function renderDetectiveAction() {
         id="night-target-list"
         class="grid gap-3 mt-6"
       >
+
         <button
           onclick="requestTargets()"
           class="rounded-xl bg-zinc-800 hover:bg-zinc-700 py-4 font-semibold"
         >
           Load Players
         </button>
+
       </div>
 
     </div>
+
   `;
+
+}
+
+
+/* ============================================================
+   SEND NIGHT ACTION
+============================================================ */
+
+function sendNightAction(
+  type,
+  targetId
+) {
+
+  if (
+    !net.clientConnection ||
+    !net.clientConnection.open ||
+    localPlayer.hasSubmittedNightAction
+  ) {
+
+    return;
+
+  }
+
+
+  localPlayer.hasSubmittedNightAction =
+    true;
+
+
+  net.clientConnection.send({
+
+    type:
+      "NIGHT_ACTION",
+
+    action:
+      type,
+
+    targetId
+
+  });
+
+
+  document.getElementById(
+    "player-content"
+  ).innerHTML = `
+
+    <div class="text-center py-10">
+
+      <i
+        data-lucide="check-circle"
+        class="w-12 h-12 mx-auto text-green-500 mb-4"
+      ></i>
+
+      <h3 class="text-xl font-bold">
+        Action submitted
+      </h3>
+
+      <p class="text-zinc-500 mt-2">
+        Waiting for the other players...
+      </p>
+
+    </div>
+
+  `;
+
+
+  lucide.createIcons();
+
+}
+
+
+/* ============================================================
+   TARGET BUTTONS
+============================================================ */
+
+function renderTargetButtons(
+  players
+) {
+
+  const nightList =
+    document.getElementById(
+      "night-target-list"
+    );
+
+
+  const voteList =
+    document.getElementById(
+      "vote-target-list"
+    );
+
+
+  const available =
+    players.filter(
+      player =>
+        player.alive &&
+        player.id !==
+          localPlayer.id
+    );
+
+
+  if (nightList) {
+
+    if (
+      available.length === 0
+    ) {
+
+      nightList.innerHTML = `
+
+        <p class="text-zinc-500 py-4">
+          No available players.
+        </p>
+
+      `;
+
+    } else {
+
+      nightList.innerHTML =
+        available
+          .map(
+            player => `
+
+              <button
+                class="btn rounded-xl bg-zinc-800 hover:bg-red-900/50 border border-zinc-800 hover:border-red-700 p-4 text-left font-bold"
+                onclick="chooseNightTarget('${escapeAttribute(player.id)}')"
+              >
+
+                ${escapeHTML(
+                  player.name
+                )}
+
+              </button>
+
+            `
+          )
+          .join("");
+
+    }
+
+  }
+
+
+  if (voteList) {
+
+    if (
+      available.length === 0
+    ) {
+
+      voteList.innerHTML = `
+
+        <p class="text-zinc-500 py-4">
+          No available players.
+        </p>
+
+      `;
+
+    } else {
+
+      voteList.innerHTML =
+        available
+          .map(
+            player => `
+
+              <button
+                class="btn rounded-xl bg-zinc-800 hover:bg-red-900/50 border border-zinc-800 hover:border-red-700 p-4 text-left font-bold"
+                onclick="castVote('${escapeAttribute(player.id)}')"
+              >
+
+                ${escapeHTML(
+                  player.name
+                )}
+
+              </button>
+
+            `
+          )
+          .join("");
+
+    }
+
+  }
+
+
+  lucide.createIcons();
+
+}
+
+
+/* ============================================================
+   CHOOSE NIGHT TARGET
+============================================================ */
+
+function chooseNightTarget(
+  targetId
+) {
+
+  let action =
+    "murder";
+
+
+  if (
+    localPlayer.role ===
+    "doctor"
+  ) {
+
+    action =
+      "protect";
+
+  }
+
+
+  if (
+    localPlayer.role ===
+    "detective"
+  ) {
+
+    action =
+      "investigate";
+
+  }
+
+
+  sendNightAction(
+    action,
+    targetId
+  );
 
 }
 
@@ -2549,19 +4343,27 @@ function renderPlayerVoting() {
     );
 
 
-  if (!localPlayer.alive) {
+  if (
+    !localPlayer.alive
+  ) {
 
     content.innerHTML = `
+
       <div class="text-center py-10">
 
-        <i data-lucide="ghost" class="w-12 h-12 mx-auto text-zinc-600 mb-4"></i>
+        <i
+          data-lucide="ghost"
+          class="w-12 h-12 mx-auto text-zinc-600 mb-4"
+        ></i>
 
         <h3 class="text-xl font-bold">
           You cannot vote
         </h3>
 
       </div>
+
     `;
+
 
     lucide.createIcons();
 
@@ -2571,9 +4373,13 @@ function renderPlayerVoting() {
 
 
   content.innerHTML = `
+
     <div class="text-center py-8">
 
-      <i data-lucide="vote" class="w-12 h-12 mx-auto text-red-500 mb-4"></i>
+      <i
+        data-lucide="vote"
+        class="w-12 h-12 mx-auto text-red-500 mb-4"
+      ></i>
 
       <h3 class="text-2xl font-bold">
         Voting is open
@@ -2596,138 +4402,11 @@ function renderPlayerVoting() {
       ></div>
 
     </div>
+
   `;
 
+
   lucide.createIcons();
-
-}
-
-
-/* ============================================================
-   HOST PLAYER LIST RESPONSE
-============================================================ */
-
-function sendCurrentPlayers(conn) {
-
-  const players =
-    Object.values(
-      hostState.players
-    ).map(player => ({
-
-      id: player.id,
-
-      name: player.name,
-
-      alive: player.alive
-
-    }));
-
-
-  conn.send({
-
-    type: "PLAYER_LIST",
-
-    players
-
-  });
-
-}
-
-
-/* ============================================================
-   CLIENT PLAYER LIST
-============================================================ */
-
-function renderTargetButtons(players) {
-
-  const nightList =
-    document.getElementById(
-      "night-target-list"
-    );
-
-
-  const voteList =
-    document.getElementById(
-      "vote-target-list"
-    );
-
-
-  if (nightList) {
-
-    const available =
-      players.filter(
-        player =>
-          player.alive &&
-          player.id !== localPlayer.id
-      );
-
-
-    nightList.innerHTML =
-      available.map(player => {
-
-        return `
-          <button
-            class="btn rounded-xl bg-zinc-800 hover:bg-red-900/50 border border-zinc-800 hover:border-red-700 p-4 text-left font-bold"
-            onclick="chooseNightTarget('${escapeAttribute(player.id)}')"
-          >
-            ${escapeHTML(player.name)}
-          </button>
-        `;
-
-      }).join("");
-
-  }
-
-
-  if (voteList) {
-
-    const available =
-      players.filter(
-        player =>
-          player.alive &&
-          player.id !== localPlayer.id
-      );
-
-
-    voteList.innerHTML =
-      available.map(player => {
-
-        return `
-          <button
-            class="btn rounded-xl bg-zinc-800 hover:bg-red-900/50 border border-zinc-800 hover:border-red-700 p-4 text-left font-bold"
-            onclick="castVote('${escapeAttribute(player.id)}')"
-          >
-            ${escapeHTML(player.name)}
-          </button>
-        `;
-
-      }).join("");
-
-  }
-
-}
-
-
-/* ============================================================
-   CHOOSE NIGHT TARGET
-============================================================ */
-
-function chooseNightTarget(targetId) {
-
-  let action = "murder";
-
-  if (localPlayer.role === "doctor") {
-    action = "protect";
-  }
-
-  if (localPlayer.role === "detective") {
-    action = "investigate";
-  }
-
-  sendNightAction(
-    action,
-    targetId
-  );
 
 }
 
@@ -2736,22 +4415,29 @@ function chooseNightTarget(targetId) {
    CAST VOTE
 ============================================================ */
 
-function castVote(targetId) {
+function castVote(
+  targetId
+) {
 
   if (
     localPlayer.hasVoted ||
-    !net.clientConnection
+    !net.clientConnection ||
+    !net.clientConnection.open
   ) {
+
     return;
+
   }
 
 
-  localPlayer.hasVoted = true;
+  localPlayer.hasVoted =
+    true;
 
 
   net.clientConnection.send({
 
-    type: "VOTE",
+    type:
+      "VOTE",
 
     targetId
 
@@ -2761,9 +4447,13 @@ function castVote(targetId) {
   document.getElementById(
     "player-content"
   ).innerHTML = `
+
     <div class="text-center py-10">
 
-      <i data-lucide="check-circle" class="w-12 h-12 mx-auto text-green-500 mb-4"></i>
+      <i
+        data-lucide="check-circle"
+        class="w-12 h-12 mx-auto text-green-500 mb-4"
+      ></i>
 
       <h3 class="text-xl font-bold">
         Vote submitted
@@ -2774,6 +4464,7 @@ function castVote(targetId) {
       </p>
 
     </div>
+
   `;
 
 
@@ -2786,7 +4477,9 @@ function castVote(targetId) {
    NIGHT RESULT
 ============================================================ */
 
-function renderNightResult(data) {
+function renderNightResult(
+  data
+) {
 
   const content =
     document.getElementById(
@@ -2798,7 +4491,9 @@ function renderNightResult(data) {
     "Everyone survived the night.";
 
 
-  if (data.killedName) {
+  if (
+    data.killedName
+  ) {
 
     message =
       `${data.killedName} did not survive the night.`;
@@ -2807,19 +4502,87 @@ function renderNightResult(data) {
 
 
   content.innerHTML = `
+
     <div class="text-center py-10">
 
-      <i data-lucide="sunrise" class="w-12 h-12 mx-auto text-yellow-400 mb-4"></i>
+      <i
+        data-lucide="sunrise"
+        class="w-12 h-12 mx-auto text-yellow-400 mb-4"
+      ></i>
 
       <h3 class="text-2xl font-bold">
         Morning has arrived
       </h3>
 
       <p class="text-zinc-400 mt-3">
-        ${escapeHTML(message)}
+        ${escapeHTML(
+          message
+        )}
       </p>
 
     </div>
+
+  `;
+
+
+  lucide.createIcons();
+
+}
+
+
+/* ============================================================
+   INVESTIGATION RESULT
+============================================================ */
+
+function handleInvestigationResult(
+  data
+) {
+
+  const content =
+    document.getElementById(
+      "player-content"
+    );
+
+
+  content.innerHTML = `
+
+    <div class="text-center py-10">
+
+      <i
+        data-lucide="search-check"
+        class="w-12 h-12 mx-auto text-blue-400 mb-4"
+      ></i>
+
+      <h3 class="text-2xl font-bold">
+        Investigation Complete
+      </h3>
+
+      <p class="text-zinc-400 mt-3">
+
+        ${escapeHTML(
+          data.targetName
+        )}
+
+        is
+
+        <strong class="${
+          data.isMurderer
+            ? "text-red-500"
+            : "text-green-500"
+        }">
+
+          ${
+            data.isMurderer
+              ? "a MURDERER"
+              : "NOT a murderer"
+          }
+
+        </strong>.
+
+      </p>
+
+    </div>
+
   `;
 
 
@@ -2832,7 +4595,9 @@ function renderNightResult(data) {
    VOTE RESULT
 ============================================================ */
 
-function renderVoteResult(data) {
+function renderVoteResult(
+  data
+) {
 
   const content =
     document.getElementById(
@@ -2844,7 +4609,9 @@ function renderVoteResult(data) {
     "The vote ended in a tie. Nobody was eliminated.";
 
 
-  if (data.eliminatedName) {
+  if (
+    data.eliminatedName
+  ) {
 
     message =
       `${data.eliminatedName} was eliminated by the vote.`;
@@ -2853,19 +4620,26 @@ function renderVoteResult(data) {
 
 
   content.innerHTML = `
+
     <div class="text-center py-10">
 
-      <i data-lucide="gavel" class="w-12 h-12 mx-auto text-red-500 mb-4"></i>
+      <i
+        data-lucide="gavel"
+        class="w-12 h-12 mx-auto text-red-500 mb-4"
+      ></i>
 
       <h3 class="text-2xl font-bold">
         Vote Result
       </h3>
 
       <p class="text-zinc-400 mt-3">
-        ${escapeHTML(message)}
+        ${escapeHTML(
+          message
+        )}
       </p>
 
     </div>
+
   `;
 
 
@@ -2878,9 +4652,14 @@ function renderVoteResult(data) {
    GAME OVER
 ============================================================ */
 
-function showGameOver(winner, players) {
+function showGameOver(
+  winner,
+  players
+) {
 
-  showView("game-over-view");
+  showView(
+    "game-over-view"
+  );
 
 
   document.getElementById(
@@ -2902,29 +4681,45 @@ function showGameOver(winner, players) {
   document.getElementById(
     "final-roles"
   ).innerHTML = `
+
     <h3 class="text-xl font-bold mb-4">
       Final Roles
     </h3>
 
     <div class="space-y-2">
 
-      ${players.map(player => `
+      ${players.map(
+        player => `
 
-        <div class="flex items-center justify-between rounded-xl bg-black/30 border border-zinc-800 p-4">
+          <div class="flex items-center justify-between rounded-xl bg-black/30 border border-zinc-800 p-4">
 
-          <span class="${player.alive ? "" : "text-zinc-600 line-through"}">
-            ${escapeHTML(player.name)}
-          </span>
+            <span class="${
+              player.alive
+                ? ""
+                : "text-zinc-600 line-through"
+            }">
 
-          <span class="text-sm font-bold text-red-400">
-            ${capitalize(player.role)}
-          </span>
+              ${escapeHTML(
+                player.name
+              )}
 
-        </div>
+            </span>
 
-      `).join("")}
+            <span class="text-sm font-bold text-red-400">
+
+              ${capitalize(
+                player.role
+              )}
+
+            </span>
+
+          </div>
+
+        `
+      ).join("")}
 
     </div>
+
   `;
 
 
@@ -2939,32 +4734,62 @@ function showGameOver(winner, players) {
 
 async function copyJoinLink() {
 
+  if (
+    !net.hostPeerId
+  ) {
+
+    alert(
+      "Host is still connecting. Please wait a moment."
+    );
+
+    return;
+
+  }
+
+
   const url =
     getJoinURL(
-      hostState.roomCode
+      hostState.roomCode,
+      net.hostPeerId
     );
+
+
+  console.log(
+    "COPY JOIN URL:",
+    url
+  );
 
 
   try {
 
-    await navigator.clipboard.writeText(url);
+    await navigator.clipboard.writeText(
+      url
+    );
 
   } catch {
 
-    /*
-      Fallback for browsers where Clipboard API isn't available.
-    */
-
     const textarea =
-      document.createElement("textarea");
+      document.createElement(
+        "textarea"
+      );
 
-    textarea.value = url;
 
-    document.body.appendChild(textarea);
+    textarea.value =
+      url;
+
+
+    document.body.appendChild(
+      textarea
+    );
+
 
     textarea.select();
 
-    document.execCommand("copy");
+
+    document.execCommand(
+      "copy"
+    );
+
 
     textarea.remove();
 
@@ -2982,13 +4807,16 @@ async function copyJoinLink() {
   );
 
 
-  setTimeout(() => {
+  setTimeout(
+    () => {
 
-    status.classList.add(
-      "hidden"
-    );
+      status.classList.add(
+        "hidden"
+      );
 
-  }, 2000);
+    },
+    2500
+  );
 
 }
 
@@ -2997,7 +4825,9 @@ async function copyJoinLink() {
    JOIN GAME
 ============================================================ */
 
-async function joinGame(event) {
+async function joinGame(
+  event
+) {
 
   event.preventDefault();
 
@@ -3005,7 +4835,8 @@ async function joinGame(event) {
   const roomCode =
     document.getElementById(
       "join-code"
-    ).value
+    )
+      .value
       .trim()
       .toUpperCase();
 
@@ -3013,8 +4844,25 @@ async function joinGame(event) {
   const name =
     document.getElementById(
       "join-name"
-    ).value
+    )
+      .value
       .trim();
+
+
+  /*
+    Get host ID from QR URL.
+  */
+
+  const params =
+    new URLSearchParams(
+      window.location.search
+    );
+
+
+  const hostPeerId =
+    params.get(
+      "host"
+    );
 
 
   if (
@@ -3032,13 +4880,39 @@ async function joinGame(event) {
   }
 
 
+  /*
+    A random host Peer ID is required.
+
+    Therefore an old QR code or manually typed room code alone
+    cannot discover a random host.
+  */
+
+  if (
+    !hostPeerId
+  ) {
+
+    showJoinStatus(
+
+      "Please scan the QR code from the host or use the copied Join Link. A room code by itself cannot locate the host.",
+
+      false
+
+    );
+
+    return;
+
+  }
+
+
   const button =
     document.querySelector(
       "#join-form button[type='submit']"
     );
 
 
-  button.disabled = true;
+  button.disabled =
+    true;
+
 
   button.textContent =
     "Connecting...";
@@ -3052,19 +4926,25 @@ async function joinGame(event) {
 
   localPlayer = {
 
-    id: getPersistentPlayerId(),
+    id:
+      getPersistentPlayerId(),
 
-    peerId: "",
+    peerId:
+      "",
 
     name,
 
-    role: null,
+    role:
+      null,
 
-    alive: true,
+    alive:
+      true,
 
-    hasSubmittedNightAction: false,
+    hasSubmittedNightAction:
+      false,
 
-    hasVoted: false
+    hasVoted:
+      false
 
   };
 
@@ -3073,10 +4953,17 @@ async function joinGame(event) {
 
     const connection =
       await net.initClient(
+
         roomCode,
+
         localPlayer.id,
+
         localPlayer.name,
+
+        hostPeerId,
+
         handleClientReceivedData
+
       );
 
 
@@ -3091,17 +4978,39 @@ async function joinGame(event) {
 
 
     /*
-      Ask the host for the current player list.
+      Host will send PLAYER_LIST after JOIN_REQUEST,
+      but request again to make sure the client gets it.
     */
 
-    connection.send({
-      type: "REQUEST_PLAYERS"
-    });
+    setTimeout(
+      () => {
+
+        if (
+          connection &&
+          connection.open
+        ) {
+
+          connection.send({
+
+            type:
+              "REQUEST_PLAYERS"
+
+          });
+
+        }
+
+      },
+      300
+    );
 
 
   } catch (error) {
 
-    console.error(error);
+    console.error(
+      "JOIN ERROR:",
+      error
+    );
+
 
     showJoinStatus(
       error.message ||
@@ -3109,10 +5018,24 @@ async function joinGame(event) {
       false
     );
 
-    button.disabled = false;
+
+    button.disabled =
+      false;
+
 
     button.textContent =
       "Join Game";
+
+
+    /*
+      Clean up failed PeerJS connection.
+    */
+
+    try {
+
+      net.destroy();
+
+    } catch {}
 
   }
 
@@ -3120,159 +5043,97 @@ async function joinGame(event) {
 
 
 /* ============================================================
-   HANDLE CLIENT REQUESTS ON HOST
+   AUTO JOIN FROM QR
 ============================================================ */
 
-const originalHostHandler =
-  handleHostReceivedData;
+function checkRoomFromURL() {
 
-
-handleHostReceivedData =
-  function(data, conn) {
-
-    if (
-      data?.type === "REQUEST_PLAYERS"
-    ) {
-
-      sendCurrentPlayers(conn);
-
-      return;
-
-    }
-
-
-    if (
-      data?.type === "NIGHT_ACTION"
-    ) {
-
-      if (
-        data.action === "murder"
-      ) {
-
-        hostState.murdererTarget =
-          data.targetId;
-
-      }
-
-
-      if (
-        data.action === "protect"
-      ) {
-
-        hostState.doctorTarget =
-          data.targetId;
-
-      }
-
-
-      if (
-        data.action === "investigate"
-      ) {
-
-        hostState.detectiveTarget =
-          data.targetId;
-
-
-        const target =
-          hostState.players[
-            data.targetId
-          ];
-
-
-        if (target) {
-
-          net.sendTo(
-            conn.peer,
-            {
-
-              type: "INVESTIGATION_RESULT",
-
-              targetName:
-                target.name,
-
-              isMurderer:
-                target.role === "murderer"
-
-            }
-          );
-
-        }
-
-      }
-
-
-      return;
-
-    }
-
-
-    if (
-      data?.type === "VOTE"
-    ) {
-
-      const player =
-        Object.values(
-          hostState.players
-        ).find(
-          p => p.peerId === conn.peer
-        );
-
-
-      if (player && player.alive) {
-
-        player.vote =
-          data.targetId;
-
-      }
-
-
-      return;
-
-    }
-
-
-    originalHostHandler(
-      data,
-      conn
-    );
-
-  };
-
-
-/* ============================================================
-   INVESTIGATION RESULT
-============================================================ */
-
-function handleInvestigationResult(data) {
-
-  const content =
-    document.getElementById(
-      "player-content"
+  const params =
+    new URLSearchParams(
+      window.location.search
     );
 
 
-  content.innerHTML = `
-    <div class="text-center py-10">
-
-      <i data-lucide="search-check" class="w-12 h-12 mx-auto text-blue-400 mb-4"></i>
-
-      <h3 class="text-2xl font-bold">
-        Investigation Complete
-      </h3>
-
-      <p class="text-zinc-400 mt-3">
-        ${escapeHTML(data.targetName)}
-        is
-        <strong class="${data.isMurderer ? "text-red-500" : "text-green-500"}">
-          ${data.isMurderer ? "a MURDERER" : "NOT a murderer"}
-        </strong>.
-      </p>
-
-    </div>
-  `;
+  const room =
+    params.get(
+      "room"
+    );
 
 
-  lucide.createIcons();
+  const host =
+    params.get(
+      "host"
+    );
+
+
+  if (!room) {
+
+    showView(
+      "landing-view"
+    );
+
+    return;
+
+  }
+
+
+  const cleanRoom =
+    room
+      .trim()
+      .toUpperCase();
+
+
+  if (
+    cleanRoom.length !== 4
+  ) {
+
+    showView(
+      "landing-view"
+    );
+
+    return;
+
+  }
+
+
+  document.getElementById(
+    "join-code"
+  ).value =
+    cleanRoom;
+
+
+  showView(
+    "join-view"
+  );
+
+
+  /*
+    Tell the user whether this is a proper QR link.
+  */
+
+  if (!host) {
+
+    showJoinStatus(
+
+      "Enter the room code, but use the host's QR/copy link to connect.",
+
+      false
+
+    );
+
+  }
+
+
+  setTimeout(
+    () => {
+
+      document.getElementById(
+        "join-name"
+      ).focus();
+
+    },
+    150
+  );
 
 }
 
@@ -3281,33 +5142,74 @@ function handleInvestigationResult(data) {
    ESCAPING
 ============================================================ */
 
-function escapeHTML(value) {
+function escapeHTML(
+  value
+) {
 
   return String(value)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+
+    .replaceAll(
+      "&",
+      "&amp;"
+    )
+
+    .replaceAll(
+      "<",
+      "&lt;"
+    )
+
+    .replaceAll(
+      ">",
+      "&gt;"
+    )
+
+    .replaceAll(
+      '"',
+      "&quot;"
+    )
+
+    .replaceAll(
+      "'",
+      "&#039;"
+    );
 
 }
 
 
-function escapeAttribute(value) {
+function escapeAttribute(
+  value
+) {
 
   return String(value)
-    .replaceAll("\\", "\\\\")
-    .replaceAll("'", "\\'");
+
+    .replaceAll(
+      "\\",
+      "\\\\"
+    )
+
+    .replaceAll(
+      "'",
+      "\\'"
+    );
 
 }
 
 
-function capitalize(value) {
+function capitalize(
+  value
+) {
 
-  if (!value) return "";
+  if (!value) {
 
-  return value.charAt(0).toUpperCase()
-    + value.slice(1);
+    return "";
+
+  }
+
+
+  return (
+    value.charAt(0).toUpperCase() +
+    value.slice(1)
+  );
 
 }
 
@@ -3330,7 +5232,10 @@ document.getElementById(
   "click",
   () => {
 
-    showView("join-view");
+    showView(
+      "join-view"
+    );
+
 
     document.getElementById(
       "join-code"
@@ -3348,7 +5253,9 @@ document.getElementById(
 
     net.destroy();
 
-    showView("landing-view");
+    showView(
+      "landing-view"
+    );
 
   }
 );
@@ -3394,10 +5301,6 @@ document.getElementById(
 
     net.destroy();
 
-    /*
-      Full reload clears all game state and returns to the
-      GitHub Pages landing page.
-    */
 
     window.location.href =
       window.location.origin +
@@ -3405,72 +5308,6 @@ document.getElementById(
 
   }
 );
-
-
-/* ============================================================
-   QR AUTO-JOIN
-============================================================ */
-
-function checkRoomFromURL() {
-
-  const params =
-    new URLSearchParams(
-      window.location.search
-    );
-
-
-  const room =
-    params.get("room");
-
-
-  if (!room) {
-
-    showView("landing-view");
-
-    return;
-
-  }
-
-
-  const cleanRoom =
-    room
-      .trim()
-      .toUpperCase();
-
-
-  if (cleanRoom.length !== 4) {
-
-    showView("landing-view");
-
-    return;
-
-  }
-
-
-  /*
-    Someone scanned the QR code.
-
-    Automatically take them to the Join screen.
-  */
-
-  document.getElementById(
-    "join-code"
-  ).value =
-    cleanRoom;
-
-
-  showView("join-view");
-
-
-  setTimeout(() => {
-
-    document.getElementById(
-      "join-name"
-    ).focus();
-
-  }, 100);
-
-}
 
 
 /* ============================================================
