@@ -2,954 +2,551 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Whispers in the Dark</title>
 
-  <!-- Tailwind -->
   <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- PeerJS -->
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-
-  <!-- QRCode -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-
-  <!-- Lucide -->
   <script src="https://unpkg.com/lucide@latest"></script>
-
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          colors: {
-            crimson: {
-              400: '#ff4d4d',
-              500: '#e60000',
-              600: '#cc0000',
-              700: '#990000',
-              800: '#660000',
-              900: '#330000',
-              950: '#1a0000'
-            },
-            noir: {
-              800: '#18181b',
-              900: '#0f0f12',
-              950: '#08080a'
-            }
-          },
-          fontFamily: {
-            serif: ['Georgia', 'Cambria', 'serif'],
-            sans: ['Inter', 'Arial', 'sans-serif']
-          }
-        }
-      }
-    };
-  </script>
 
   <style>
     * {
       box-sizing: border-box;
     }
 
+    html,
     body {
-      background: #08080a;
-      color: #f3f4f6;
-      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      min-height: 100%;
+      background: #050507;
+      color: #f5f5f5;
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    body {
       overflow-x: hidden;
     }
 
-    .glass-panel {
-      background: rgba(24, 24, 27, 0.88);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border: 1px solid rgba(255,255,255,.08);
-      box-shadow: 0 8px 32px rgba(0,0,0,.6);
+    .hidden {
+      display: none !important;
     }
 
-    .glass-panel-red {
-      background: rgba(51,0,0,.48);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border: 1px solid rgba(230,0,0,.3);
-      box-shadow: 0 8px 32px rgba(153,0,0,.4);
+    .glass {
+      background: rgba(20, 20, 24, 0.82);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+      backdrop-filter: blur(18px);
     }
 
-    .blood-glow {
-      box-shadow: 0 0 25px rgba(230,0,0,.5);
+    .red-glow {
+      box-shadow:
+        0 0 30px rgba(220, 38, 38, 0.12),
+        inset 0 0 30px rgba(220, 38, 38, 0.03);
     }
 
-    .pulse-glow {
-      animation: pulse-red 2.5s infinite alternate;
+    .btn {
+      transition: all 0.2s ease;
     }
 
-    @keyframes pulse-red {
+    .btn:hover {
+      transform: translateY(-1px);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+    }
+
+    .role-card {
+      transition: all 0.2s ease;
+    }
+
+    .role-card:hover {
+      border-color: rgba(220, 38, 38, 0.4);
+    }
+
+    .role-card.selected {
+      border-color: rgba(220, 38, 38, 0.8);
+      background: rgba(127, 29, 29, 0.18);
+    }
+
+    .pulse {
+      animation: pulse 1.7s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.45;
+      }
+    }
+
+    .fade-in {
+      animation: fadeIn 0.35s ease;
+    }
+
+    @keyframes fadeIn {
       from {
-        box-shadow: 0 0 10px rgba(230,0,0,.2);
+        opacity: 0;
+        transform: translateY(8px);
       }
+
       to {
-        box-shadow: 0 0 35px rgba(230,0,0,.7);
+        opacity: 1;
+        transform: translateY(0);
       }
-    }
-
-    button {
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    .role-card-cover {
-      user-select: none;
-      -webkit-user-select: none;
-      touch-action: manipulation;
     }
 
     #qrcode img,
     #qrcode canvas {
+      display: block;
       margin: auto;
-      border-radius: 8px;
+      border-radius: 10px;
+    }
+
+    .role-hidden {
+      filter: blur(10px);
+      user-select: none;
+      cursor: pointer;
+    }
+
+    .role-hidden * {
+      pointer-events: none;
+    }
+
+    .timer {
+      font-variant-numeric: tabular-nums;
+    }
+
+    input:focus,
+    select:focus {
+      outline: none;
+      border-color: rgba(220, 38, 38, 0.75) !important;
+      box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.08);
     }
   </style>
 </head>
 
-<body class="min-h-screen flex flex-col selection:bg-crimson-600 selection:text-white">
+<body>
 
-  <!-- Sound -->
-  <div class="fixed top-4 right-4 z-50">
-    <button
-      id="sound-toggle-btn"
-      class="glass-panel p-2.5 rounded-full hover:bg-slate-800 transition text-slate-400 hover:text-white"
-      title="Toggle Sound"
-    >
-      <i data-lucide="volume-2" id="sound-icon" class="w-5 h-5"></i>
-    </button>
-  </div>
-
-  <!-- Toasts -->
-  <div
-    id="toast-container"
-    class="fixed top-4 left-1/2 -translate-x-1/2 z-[100] flex flex-col items-center gap-2 pointer-events-none w-full max-w-sm px-4"
-  ></div>
-
-  <main class="flex-grow flex items-center justify-center p-4 md:p-6 relative">
-
-    <div class="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2
-                w-96 h-96 bg-crimson-900/20 rounded-full blur-[120px] pointer-events-none">
-    </div>
-
-    <!-- ========================================================= -->
-    <!-- LANDING -->
-    <!-- ========================================================= -->
-
-    <section id="view-landing" class="w-full max-w-md mx-auto text-center space-y-8 z-10">
-
-      <div class="space-y-3">
-
-        <div class="inline-flex items-center justify-center p-4 rounded-full
-                    bg-crimson-950/80 border border-crimson-700/50 mb-2 blood-glow">
-
-          <i data-lucide="skull" class="w-12 h-12 text-crimson-500"></i>
-
+  <!-- LANDING -->
+  <section id="landing-view" class="min-h-screen flex items-center justify-center p-5">
+    <div class="w-full max-w-xl text-center">
+      <div class="mb-8">
+        <div class="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-red-950/40 border border-red-800/40 mb-5">
+          <i data-lucide="moon" class="w-10 h-10 text-red-500"></i>
         </div>
 
-        <h1 class="text-4xl md:text-5xl font-serif tracking-wider text-white uppercase font-black">
-          Whispers
-          <span class="text-crimson-500">In The</span>
-          Dark
+        <h1 class="text-5xl md:text-6xl font-black tracking-tight">
+          Whispers in the <span class="text-red-500">Dark</span>
         </h1>
 
-        <p class="text-slate-400 text-sm md:text-base">
-          Real-time multi-device murder mystery game.
+        <p class="text-zinc-400 mt-4 text-lg">
+          A multiplayer mystery of deception, deduction, and survival.
         </p>
-
       </div>
 
-      <div class="grid gap-4 pt-4">
+      <div class="glass red-glow rounded-3xl p-6 md:p-8">
+        <div class="grid md:grid-cols-2 gap-4">
+          <button
+            id="btn-create"
+            class="btn rounded-2xl bg-red-600 hover:bg-red-500 px-6 py-5 font-bold text-lg flex items-center justify-center gap-3"
+          >
+            <i data-lucide="crown"></i>
+            Create Game
+          </button>
 
-        <button
-          id="btn-choice-host"
-          class="glass-panel-red hover:bg-crimson-900/40 p-6 rounded-2xl
-                 flex items-center justify-between group transition-all text-left"
-        >
-          <div>
-            <div class="text-xl font-bold flex items-center gap-2">
-              <i data-lucide="tv" class="w-5 h-5 text-crimson-400"></i>
-              Create New Room
-            </div>
-
-            <div class="text-xs text-slate-400 mt-1">
-              Host the game and display the QR code.
-            </div>
-          </div>
-
-          <i data-lucide="chevron-right"
-             class="w-6 h-6 text-slate-500 group-hover:text-crimson-400 transition">
-          </i>
-        </button>
-
-        <button
-          id="btn-choice-join"
-          class="glass-panel hover:bg-slate-800/60 p-6 rounded-2xl
-                 flex items-center justify-between group transition-all text-left"
-        >
-          <div>
-            <div class="text-xl font-bold flex items-center gap-2">
-              <i data-lucide="smartphone" class="w-5 h-5 text-indigo-400"></i>
-              Join Game
-            </div>
-
-            <div class="text-xs text-slate-400 mt-1">
-              Enter a room code and your name.
-            </div>
-          </div>
-
-          <i data-lucide="chevron-right"
-             class="w-6 h-6 text-slate-500 group-hover:text-indigo-400 transition">
-          </i>
-        </button>
-
+          <button
+            id="btn-show-join"
+            class="btn rounded-2xl bg-zinc-800 hover:bg-zinc-700 px-6 py-5 font-bold text-lg flex items-center justify-center gap-3"
+          >
+            <i data-lucide="log-in"></i>
+            Join Game
+          </button>
+        </div>
       </div>
-    </section>
+
+      <p class="text-zinc-600 text-sm mt-6">
+        No account required • Works on phones, tablets, and computers
+      </p>
+    </div>
+  </section>
 
 
-    <!-- ========================================================= -->
-    <!-- JOIN -->
-    <!-- ========================================================= -->
+  <!-- JOIN -->
+  <section id="join-view" class="hidden min-h-screen flex items-center justify-center p-5">
+    <div class="w-full max-w-md">
+      <button id="btn-back-landing" class="text-zinc-400 hover:text-white mb-5 flex items-center gap-2">
+        <i data-lucide="arrow-left" class="w-4"></i>
+        Back
+      </button>
 
-    <section id="view-join" class="w-full max-w-md mx-auto hidden z-10">
+      <div class="glass rounded-3xl p-7">
+        <div class="text-center mb-7">
+          <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-red-950/40 mb-4">
+            <i data-lucide="door-open" class="text-red-500 w-8 h-8"></i>
+          </div>
 
-      <div class="glass-panel p-6 md:p-8 rounded-3xl space-y-6">
-
-        <button
-          class="btn-back text-slate-400 hover:text-white flex items-center gap-1 text-sm"
-        >
-          <i data-lucide="arrow-left" class="w-4 h-4"></i>
-          Back
-        </button>
-
-        <div class="text-center">
-
-          <h2 class="text-2xl font-serif font-bold">
-            Join the Lobby
-          </h2>
-
-          <p class="text-xs text-slate-400 mt-1">
-            Enter the room code and your player name.
+          <h2 class="text-3xl font-bold">Join Game</h2>
+          <p class="text-zinc-500 mt-2">
+            Enter the 4-character room code
           </p>
-
         </div>
 
-        <form id="form-join" class="space-y-4">
-
+        <form id="join-form" class="space-y-4">
           <div>
-
-            <label class="block text-xs uppercase font-semibold text-slate-400 mb-1">
+            <label class="block text-sm text-zinc-400 mb-2">
               Room Code
             </label>
 
             <input
-              type="text"
-              id="input-room-code"
+              id="join-code"
               maxlength="4"
+              autocomplete="off"
+              autocapitalize="characters"
+              class="w-full rounded-xl bg-black/40 border border-zinc-800 px-4 py-4 text-center text-3xl font-black tracking-[0.35em] uppercase"
               placeholder="ABCD"
               required
-              autocomplete="off"
-              class="w-full bg-noir-950 border border-slate-700 rounded-xl
-                     px-4 py-3 font-mono text-2xl tracking-widest text-center
-                     uppercase text-crimson-400 focus:outline-none focus:border-crimson-500"
             >
-
           </div>
 
           <div>
-
-            <label class="block text-xs uppercase font-semibold text-slate-400 mb-1">
+            <label class="block text-sm text-zinc-400 mb-2">
               Your Name
             </label>
 
             <input
-              type="text"
-              id="input-player-name"
-              maxlength="14"
-              placeholder="Detective Miller"
+              id="join-name"
+              maxlength="20"
+              autocomplete="name"
+              class="w-full rounded-xl bg-black/40 border border-zinc-800 px-4 py-4"
+              placeholder="Enter your name"
               required
-              autocomplete="off"
-              class="w-full bg-noir-950 border border-slate-700 rounded-xl
-                     px-4 py-3 text-lg text-white focus:outline-none focus:border-indigo-500"
             >
-
           </div>
 
           <button
             type="submit"
-            id="btn-submit-join"
-            class="w-full py-4 bg-crimson-600 hover:bg-crimson-500
-                   font-bold rounded-xl text-white transition flex items-center
-                   justify-center gap-2"
+            class="btn w-full rounded-xl bg-red-600 hover:bg-red-500 py-4 font-bold text-lg"
           >
-            <span>Enter Game Room</span>
-            <i data-lucide="log-in" class="w-5 h-5"></i>
+            Join Game
           </button>
-
         </form>
 
+        <div id="join-status" class="hidden mt-5 rounded-xl p-4 text-center text-sm"></div>
       </div>
-    </section>
+    </div>
+  </section>
 
 
-    <!-- ========================================================= -->
-    <!-- HOST LOBBY -->
-    <!-- ========================================================= -->
-
-    <section id="view-host-lobby"
-             class="w-full max-w-5xl mx-auto hidden z-10 space-y-6">
-
-      <div class="glass-panel p-6 rounded-3xl flex flex-col md:flex-row
-                  items-center justify-between gap-6">
-
-        <div class="space-y-2 text-center md:text-left">
-
-          <span class="px-3 py-1 bg-crimson-950 border border-crimson-700
-                       text-crimson-400 text-xs font-bold rounded-full uppercase">
-            Host Command Center
-          </span>
-
-          <h2 class="text-3xl font-serif font-bold text-white">
-            Lobby Setup
-          </h2>
-
-          <p class="text-xs text-slate-400">
-            Scan the QR code with each player's phone.
+  <!-- HOST LOBBY -->
+  <section id="host-lobby-view" class="hidden min-h-screen p-5">
+    <div class="max-w-6xl mx-auto">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+        <div>
+          <p class="text-red-500 text-sm font-bold uppercase tracking-widest">
+            Host Lobby
           </p>
-
+          <h2 class="text-3xl font-black">
+            Whispers in the Dark
+          </h2>
         </div>
 
-        <div class="flex flex-col items-center gap-4">
+        <button
+          id="btn-host-start"
+          class="btn rounded-xl bg-red-600 hover:bg-red-500 px-6 py-3 font-bold"
+        >
+          Start Game
+        </button>
+      </div>
 
-          <div class="flex items-center gap-5 bg-noir-950 p-4 rounded-2xl border border-slate-800">
+      <div class="grid lg:grid-cols-3 gap-5">
 
-            <div class="text-center">
+        <div class="glass rounded-3xl p-6 text-center">
+          <p class="text-zinc-500 text-sm mb-2">Room Code</p>
 
-              <div class="text-[10px] text-slate-400 uppercase tracking-widest">
-                Room Code
-              </div>
+          <div
+            id="host-room-code"
+            class="text-6xl font-black tracking-[0.2em] text-red-500"
+          >
+            ----
+          </div>
 
-              <div
-                id="display-room-code"
-                class="text-4xl font-mono font-black text-crimson-500 tracking-widest"
-              >
-                ----
-              </div>
+          <p class="text-zinc-500 text-sm mt-4">
+            Scan the QR code or enter this code manually.
+          </p>
 
-            </div>
-
-            <div class="w-px h-20 bg-slate-800"></div>
-
-            <div
-              id="qrcode"
-              class="p-2 bg-white rounded-xl min-w-[120px] min-h-[120px] flex items-center justify-center"
-            ></div>
-
+          <div class="bg-white rounded-2xl p-5 mt-6 inline-block">
+            <div id="qrcode"></div>
           </div>
 
           <button
             id="btn-copy-link"
-            class="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg
-                   text-xs font-semibold flex items-center gap-2"
+            class="btn w-full mt-5 rounded-xl bg-zinc-800 hover:bg-zinc-700 py-3 font-semibold flex items-center justify-center gap-2"
           >
-            <i data-lucide="copy" class="w-4 h-4"></i>
+            <i data-lucide="copy" class="w-4"></i>
             Copy Join Link
           </button>
 
-          <div
-            id="network-address"
-            class="text-[10px] text-slate-500 text-center max-w-xs break-all"
-          ></div>
-
-        </div>
-
-      </div>
-
-
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-
-        <!-- Players -->
-
-        <div class="glass-panel p-6 rounded-3xl space-y-4 md:col-span-2">
-
-          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-
-            <h3 class="text-lg font-bold flex items-center gap-2">
-
-              <i data-lucide="users" class="w-5 h-5 text-indigo-400"></i>
-
-              Connected Players
-              (<span id="player-count">0</span>/20)
-
-            </h3>
-
-            <span class="text-xs text-slate-400">
-              Minimum 4
-            </span>
-
-          </div>
-
-          <div
-            id="host-player-list"
-            class="grid grid-cols-2 sm:grid-cols-3 gap-3 min-h-[220px]"
-          ></div>
-
+          <p id="copy-status" class="text-green-400 text-sm mt-3 hidden">
+            Join link copied!
+          </p>
         </div>
 
 
-        <!-- Roles -->
-
-        <div class="glass-panel p-6 rounded-3xl space-y-4 flex flex-col justify-between">
-
-          <div class="space-y-4">
-
-            <h3 class="text-lg font-bold flex items-center gap-2 border-b border-slate-800 pb-3">
-              <i data-lucide="sliders" class="w-5 h-5 text-crimson-400"></i>
-              Role Setup
-            </h3>
-
-            <!-- Murderers -->
-
-            <div class="flex items-center justify-between bg-noir-950 p-3 rounded-xl border border-slate-800">
-
-              <span class="font-bold text-crimson-400">
-                Murderers
-              </span>
-
-              <div class="flex items-center gap-2">
-
-                <button
-                  class="role-adj-btn px-3 py-1 bg-slate-800 rounded hover:bg-slate-700"
-                  data-role="murderers"
-                  data-change="-1"
-                >
-                  −
-                </button>
-
-                <span id="cfg-murderers" class="font-mono font-bold w-5 text-center">
-                  2
-                </span>
-
-                <button
-                  class="role-adj-btn px-3 py-1 bg-slate-800 rounded hover:bg-slate-700"
-                  data-role="murderers"
-                  data-change="1"
-                >
-                  +
-                </button>
-
-              </div>
-            </div>
-
-
-            <!-- Detective -->
-
-            <div class="flex items-center justify-between bg-noir-950 p-3 rounded-xl border border-slate-800">
-
-              <span class="font-bold text-blue-400">
-                Detective
-              </span>
-
-              <div class="flex items-center gap-2">
-
-                <button
-                  class="role-adj-btn px-3 py-1 bg-slate-800 rounded hover:bg-slate-700"
-                  data-role="detectives"
-                  data-change="-1"
-                >
-                  −
-                </button>
-
-                <span id="cfg-detectives" class="font-mono font-bold w-5 text-center">
-                  1
-                </span>
-
-                <button
-                  class="role-adj-btn px-3 py-1 bg-slate-800 rounded hover:bg-slate-700"
-                  data-role="detectives"
-                  data-change="1"
-                >
-                  +
-                </button>
-
-              </div>
-            </div>
-
-
-            <!-- Doctor -->
-
-            <div class="flex items-center justify-between bg-noir-950 p-3 rounded-xl border border-slate-800">
-
-              <span class="font-bold text-emerald-400">
-                Doctor
-              </span>
-
-              <div class="flex items-center gap-2">
-
-                <button
-                  class="role-adj-btn px-3 py-1 bg-slate-800 rounded hover:bg-slate-700"
-                  data-role="doctors"
-                  data-change="-1"
-                >
-                  −
-                </button>
-
-                <span id="cfg-doctors" class="font-mono font-bold w-5 text-center">
-                  1
-                </span>
-
-                <button
-                  class="role-adj-btn px-3 py-1 bg-slate-800 rounded hover:bg-slate-700"
-                  data-role="doctors"
-                  data-change="1"
-                >
-                  +
-                </button>
-
-              </div>
-            </div>
-
-
-            <div class="bg-noir-950/60 p-3 rounded-xl border border-slate-800/40">
-
-              <div class="flex justify-between">
-
-                <span class="text-slate-400">
-                  Innocents
-                </span>
-
-                <span id="cfg-innocents"
-                      class="font-mono font-bold text-slate-200">
-                  0
-                </span>
-
-              </div>
-
-            </div>
-
-          </div>
-
-
-          <button
-            id="btn-start-game"
-            disabled
-            class="w-full py-4 bg-crimson-600 disabled:opacity-40
-                   disabled:cursor-not-allowed hover:bg-crimson-500
-                   text-white font-bold rounded-2xl transition uppercase"
-          >
-            Distribute Roles & Start
-          </button>
-
-        </div>
-
-      </div>
-
-    </section>
-
-
-    <!-- ========================================================= -->
-    <!-- HOST GAME -->
-    <!-- ========================================================= -->
-
-    <section id="view-host-game"
-             class="w-full max-w-6xl mx-auto hidden z-10 space-y-6">
-
-      <div class="glass-panel p-5 rounded-3xl flex flex-col md:flex-row
-                  items-center justify-between gap-4">
-
-        <div>
-
-          <div
-            id="host-phase-badge"
-            class="px-3 py-1 bg-crimson-950 text-crimson-400
-                   border border-crimson-800 text-xs font-bold
-                   rounded-full uppercase inline-block"
-          >
-            NIGHT PHASE
-          </div>
-
-          <h2
-            id="host-phase-title"
-            class="text-3xl font-serif font-bold text-white mt-2"
-          >
-            Ask Everyone To Close Their Eyes
-          </h2>
-
-        </div>
-
-        <div class="flex items-center gap-3">
-
-          <div class="bg-noir-950 px-5 py-2.5 rounded-2xl border border-slate-800 text-center">
-
-            <div class="text-[10px] uppercase text-slate-400">
-              Countdown
+        <div class="glass rounded-3xl p-6 lg:col-span-2">
+          <div class="flex items-center justify-between mb-5">
+            <div>
+              <p class="text-zinc-500 text-sm">Players</p>
+              <h3 class="text-2xl font-bold">
+                Waiting Room
+              </h3>
             </div>
 
             <div
-              id="host-timer"
-              class="text-2xl font-mono font-bold text-crimson-400"
+              id="host-player-count"
+              class="rounded-full bg-zinc-800 px-4 py-2 text-sm font-bold"
             >
-              00:00
+              0 players
             </div>
+          </div>
 
+          <div
+            id="host-roster"
+            class="space-y-3"
+          ></div>
+
+          <div
+            id="host-empty"
+            class="text-center py-14 text-zinc-600"
+          >
+            <i data-lucide="users" class="w-10 h-10 mx-auto mb-3"></i>
+            <p>Waiting for players to join...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- HOST GAME -->
+  <section id="host-game-view" class="hidden min-h-screen p-5">
+    <div class="max-w-6xl mx-auto">
+
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+        <div>
+          <p id="host-phase-label" class="text-red-500 font-bold uppercase tracking-widest text-sm">
+            Night
+          </p>
+
+          <h2 id="host-phase-title" class="text-3xl font-black">
+            The Night Begins
+          </h2>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <div class="glass rounded-xl px-5 py-3">
+            <span class="text-zinc-500 text-sm">Time</span>
+            <span id="host-timer" class="timer text-xl font-black ml-2">--</span>
           </div>
 
           <button
             id="btn-host-next-phase"
-            class="px-5 py-3 bg-crimson-600 hover:bg-crimson-500
-                   font-bold rounded-xl text-white"
+            class="btn rounded-xl bg-zinc-800 hover:bg-zinc-700 px-5 py-3 font-bold"
           >
             Force Advance
           </button>
-
         </div>
-
       </div>
 
+      <div id="host-game-content" class="glass rounded-3xl p-6"></div>
+    </div>
+  </section>
 
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
 
-        <div class="glass-panel p-6 rounded-3xl md:col-span-2 space-y-4">
+  <!-- PLAYER -->
+  <section id="player-view" class="hidden min-h-screen p-5">
+    <div class="max-w-3xl mx-auto">
 
-          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+      <div class="flex items-center justify-between mb-5">
+        <div>
+          <p id="player-phase-label" class="text-red-500 font-bold uppercase tracking-widest text-sm">
+            Lobby
+          </p>
 
-            <h3 class="text-lg font-bold">
-              Host Script & Actions
-            </h3>
-
-            <span
-              id="night-action-tracker"
-              class="text-xs font-mono bg-slate-800 px-2.5 py-1 rounded-full"
-            >
-              0 Submissions
-            </span>
-
-          </div>
-
-          <div
-            id="host-dynamic-stage"
-            class="min-h-[300px]"
-          ></div>
-
+          <h2 id="player-phase-title" class="text-3xl font-black">
+            Waiting...
+          </h2>
         </div>
 
-
-        <div class="glass-panel p-6 rounded-3xl space-y-4">
-
-          <h3 class="text-lg font-bold border-b border-slate-800 pb-3">
-            Town Roster
-          </h3>
-
-          <div
-            id="host-roster-list"
-            class="space-y-2 max-h-[400px] overflow-y-auto"
-          ></div>
-
+        <div class="glass rounded-xl px-4 py-3">
+          <span class="text-zinc-500 text-sm">Time</span>
+          <span id="player-timer" class="timer text-xl font-black ml-2">--</span>
         </div>
-
       </div>
 
-    </section>
-
-
-    <!-- ========================================================= -->
-    <!-- PLAYER -->
-    <!-- ========================================================= -->
-
-    <section id="view-player"
-             class="w-full max-w-sm mx-auto hidden z-10 space-y-5">
-
-      <div class="glass-panel p-4 rounded-2xl flex items-center justify-between">
-
-        <div class="flex items-center gap-3">
-
-          <div
-            id="player-avatar"
-            class="w-10 h-10 rounded-full bg-crimson-900/60
-                   border border-crimson-600 flex items-center justify-center
-                   font-bold"
-          >
-            P
-          </div>
-
-          <div>
-
-            <div
-              id="player-display-name"
-              class="font-bold text-white text-sm"
-            >
-              Player
-            </div>
-
-            <div
-              id="player-status-tag"
-              class="text-[10px] text-emerald-400 font-semibold uppercase"
-            >
-              Connecting
-            </div>
-
-          </div>
-
-        </div>
+      <!-- ROLE CARD -->
+      <div
+        id="player-role-card"
+        class="glass rounded-3xl p-7 mb-5 text-center"
+      >
+        <p class="text-zinc-500 text-sm mb-3">
+          Your Role
+        </p>
 
         <div
-          id="player-room-badge"
-          class="px-2.5 py-1 bg-noir-950 border border-slate-800
-                 text-xs font-mono text-slate-400 rounded-lg"
+          id="player-role-name"
+          class="text-4xl font-black text-red-500"
         >
-          ----
+          Waiting...
         </div>
 
-      </div>
-
-
-      <!-- Role -->
-
-      <div class="glass-panel p-5 rounded-3xl text-center space-y-3">
-
-        <div
-          id="role-reveal-box"
-          class="py-6 px-4 rounded-2xl bg-noir-950 border
-                 border-slate-800 cursor-pointer role-card-cover"
+        <p
+          id="player-role-description"
+          class="text-zinc-400 mt-3"
         >
-
-          <div id="role-hidden-content" class="space-y-2">
-
-            <i data-lucide="eye-off"
-               class="w-8 h-8 text-slate-500 mx-auto">
-            </i>
-
-            <div class="text-xs font-semibold text-slate-400">
-              PRESS / HOLD TO REVEAL ROLE
-            </div>
-
-          </div>
-
-          <div id="role-revealed-content"
-               class="hidden space-y-2">
-
-            <div
-              id="player-role-title"
-              class="text-2xl font-serif font-black uppercase"
-            >
-              INNOCENT
-            </div>
-
-            <p
-              id="player-role-desc"
-              class="text-xs text-slate-300"
-            ></p>
-
-          </div>
-
-        </div>
-
+          The host has not started the game yet.
+        </p>
       </div>
-
 
       <div
-        id="player-action-box"
-        class="glass-panel p-5 rounded-3xl min-h-[220px]
-               flex flex-col justify-center"
+        id="player-content"
+        class="glass rounded-3xl p-6"
       ></div>
+    </div>
+  </section>
 
-    </section>
 
+  <!-- GAME OVER -->
+  <section id="game-over-view" class="hidden min-h-screen flex items-center justify-center p-5">
+    <div class="w-full max-w-3xl">
 
-    <!-- ========================================================= -->
-    <!-- GAME OVER -->
-    <!-- ========================================================= -->
+      <div class="glass rounded-3xl p-8 text-center">
+        <i data-lucide="trophy" class="w-16 h-16 text-red-500 mx-auto mb-5"></i>
 
-    <section id="view-game-over"
-             class="w-full max-w-lg mx-auto hidden z-10 text-center">
+        <p class="text-zinc-500 uppercase tracking-widest text-sm">
+          Game Over
+        </p>
 
-      <div class="glass-panel-red p-8 rounded-3xl space-y-6 pulse-glow">
+        <h2
+          id="winner-title"
+          class="text-5xl font-black mt-2"
+        >
+          ----
+        </h2>
 
-        <div class="w-20 h-20 mx-auto rounded-full bg-crimson-900/60
-                    border border-crimson-500 flex items-center justify-center">
+        <p
+          id="winner-description"
+          class="text-zinc-400 mt-4"
+        ></p>
 
-          <i data-lucide="trophy"
-             class="w-10 h-10 text-crimson-400">
-          </i>
-
-        </div>
-
-        <div>
-
-          <h2
-            id="victory-title"
-            class="text-4xl font-serif font-black text-white uppercase"
-          >
-            MURDERERS WIN
-          </h2>
-
-          <p
-            id="victory-subtitle"
-            class="text-sm text-slate-300 mt-2"
-          ></p>
-
-        </div>
-
-        <div class="bg-noir-950/80 p-4 rounded-2xl border border-slate-800 text-left">
-
-          <h4 class="text-xs uppercase text-slate-400 font-bold mb-3">
-            Final Role Reveal
-          </h4>
-
-          <div
-            id="final-roles-list"
-            class="space-y-1.5 text-sm max-h-48 overflow-y-auto"
-          ></div>
-
-        </div>
+        <div
+          id="final-roles"
+          class="mt-8 text-left"
+        ></div>
 
         <button
           id="btn-restart"
-          class="w-full py-4 bg-crimson-600 hover:bg-crimson-500
-                 text-white font-bold rounded-xl"
+          class="btn mt-8 rounded-xl bg-red-600 hover:bg-red-500 px-7 py-4 font-bold"
         >
-          Return to Title Screen
+          Return to Home
         </button>
-
       </div>
-
-    </section>
-
-  </main>
-
-  <footer class="py-3 text-center text-xs text-slate-600">
-    Whispers in the Dark • WebRTC Multiplayer
-  </footer>
+    </div>
+  </section>
 
 
 <script>
-
 /* ============================================================
-   AUDIO
+   GAME CONFIG
 ============================================================ */
 
-class AudioEngine {
+const GAME_NAME = "whispers-in-the-dark";
 
-  constructor() {
-    this.ctx = null;
-    this.muted = false;
-  }
+const ROLE_DESCRIPTIONS = {
+  murderer: "You are one of the murderers. Work together secretly and eliminate the others.",
+  detective: "Investigate one player each night to learn whether they are a murderer.",
+  doctor: "Protect one player each night from being eliminated.",
+  innocent: "Survive, observe, discuss, and help identify the murderers."
+};
 
-  init() {
 
-    if (!this.ctx) {
+/* ============================================================
+   VIEW HELPERS
+============================================================ */
 
-      const AudioContext =
-        window.AudioContext ||
-        window.webkitAudioContext;
+const views = [
+  "landing-view",
+  "join-view",
+  "host-lobby-view",
+  "host-game-view",
+  "player-view",
+  "game-over-view"
+];
 
-      if (!AudioContext) return;
+function showView(id) {
+  views.forEach(view => {
+    document.getElementById(view)?.classList.add("hidden");
+  });
 
-      this.ctx = new AudioContext();
-    }
+  document.getElementById(id)?.classList.remove("hidden");
 
-    if (this.ctx.state === 'suspended') {
-      this.ctx.resume();
-    }
-  }
-
-  playPhaseChime(isNight) {
-
-    if (this.muted) return;
-
-    this.init();
-
-    if (!this.ctx) return;
-
-    const now = this.ctx.currentTime;
-
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-
-    osc.connect(gain);
-    gain.connect(this.ctx.destination);
-
-    if (isNight) {
-
-      osc.type = 'sawtooth';
-
-      osc.frequency.setValueAtTime(110, now);
-
-      osc.frequency.exponentialRampToValueAtTime(
-        35,
-        now + 1.2
-      );
-
-      gain.gain.setValueAtTime(.25, now);
-
-      gain.gain.exponentialRampToValueAtTime(
-        .001,
-        now + 1.2
-      );
-
-      osc.start();
-      osc.stop(now + 1.2);
-
-    } else {
-
-      osc.type = 'sine';
-
-      osc.frequency.setValueAtTime(320, now);
-
-      osc.frequency.exponentialRampToValueAtTime(
-        640,
-        now + .8
-      );
-
-      gain.gain.setValueAtTime(.2, now);
-
-      gain.gain.exponentialRampToValueAtTime(
-        .001,
-        now + .8
-      );
-
-      osc.start();
-      osc.stop(now + .8);
-    }
-  }
-
-  playVoteSting() {
-
-    if (this.muted) return;
-
-    this.init();
-
-    if (!this.ctx) return;
-
-    const now = this.ctx.currentTime;
-
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-
-    osc.type = 'triangle';
-
-    osc.frequency.setValueAtTime(220, now);
-
-    gain.gain.setValueAtTime(.2, now);
-
-    gain.gain.exponentialRampToValueAtTime(
-      .001,
-      now + .25
-    );
-
-    osc.connect(gain);
-    gain.connect(this.ctx.destination);
-
-    osc.start();
-    osc.stop(now + .25);
-  }
+  lucide.createIcons();
 }
 
-const audio = new AudioEngine();
+
+/* ============================================================
+   ROOM CODE
+============================================================ */
+
+function generateRoomCode() {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let code = "";
+
+  for (let i = 0; i < 4; i++) {
+    code += chars[Math.floor(Math.random() * chars.length)];
+  }
+
+  return code;
+}
+
+
+/* ============================================================
+   IMPORTANT QR FIX
+============================================================ */
+
+/*
+   NEVER use a LAN IP for the deployed GitHub Pages version.
+
+   The QR code should always point back to the exact page that
+   the host is currently using.
+
+   Example:
+
+   https://kashishd2023.github.io/whispers-in-the-dark/?room=ABCD
+
+   The player scans that URL on their phone.
+
+   Their phone loads the website and then connects through PeerJS.
+*/
+
+function getJoinURL(roomCode) {
+  const url = new URL(window.location.href);
+
+  // Remove any old room information.
+  url.search = "";
+  url.hash = "";
+
+  // Add the current room.
+  url.searchParams.set("room", roomCode.toUpperCase());
+
+  return url.toString();
+}
 
 
 /* ============================================================
@@ -959,421 +556,373 @@ const audio = new AudioEngine();
 class NetworkEngine {
 
   constructor() {
-
     this.peer = null;
-
+    this.hostPeerId = null;
+    this.connections = new Map();
     this.isHost = false;
-
-    this.roomCode = '';
-
-    this.connections = {};
-
-    this.hostConn = null;
-
-    this.onMessageCallback = null;
-
-    this.connected = false;
+    this.onData = null;
   }
 
 
-  generateRoomCode() {
+  /*
+    Create host Peer.
 
-    const chars =
-      'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-
-    let code = '';
-
-    for (let i = 0; i < 4; i++) {
-
-      code += chars[
-        Math.floor(Math.random() * chars.length)
-      ];
-    }
-
-    return code;
-  }
-
+    We keep the PeerJS ID based on the room code so that a player
+    who manually types the room code can still join.
+  */
 
   initHost(roomCode, callback) {
 
     this.isHost = true;
+    this.onData = callback;
 
-    this.roomCode = roomCode;
+    const cleanRoom = roomCode.toLowerCase();
 
-    this.onMessageCallback = callback;
+    this.hostPeerId = `whispers-dark-${cleanRoom}`;
 
-    const peerId =
-      `whispers-dark-${roomCode.toLowerCase()}`;
+    return new Promise((resolve, reject) => {
 
-    console.log('Creating host:', peerId);
+      try {
 
-    try {
+        this.peer = new Peer(this.hostPeerId, {
+          debug: 2
+        });
 
-      this.peer = new Peer(peerId, {
-        debug: 2
-      });
+        this.peer.on("open", id => {
 
-    } catch (error) {
+          console.log("Host Peer connected:", id);
 
-      console.error(error);
-
-      showToast(
-        'PeerJS could not start.',
-        'error'
-      );
-
-      return;
-    }
+          resolve(id);
+        });
 
 
-    this.peer.on('open', id => {
+        this.peer.on("connection", conn => {
 
-      console.log('HOST PEER OPEN:', id);
+          console.log("Incoming connection:", conn.peer);
 
-      this.connected = true;
+          this.setupHostConnection(conn);
 
-      showToast('Room is ready!');
-    });
-
-
-    this.peer.on('connection', conn => {
-
-      console.log(
-        'Incoming connection:',
-        conn.peer
-      );
-
-      conn.on('open', () => {
-
-        console.log(
-          'Player connection opened:',
-          conn.peer
-        );
-
-        this.connections[conn.peer] = conn;
-
-      });
+        });
 
 
-      conn.on('data', data => {
+        this.peer.on("error", error => {
 
-        console.log(
-          'HOST RECEIVED:',
-          conn.peer,
-          data
-        );
+          console.error("Host Peer error:", error);
 
-        this.onMessageCallback(
-          conn.peer,
-          data
-        );
-      });
+          if (error.type === "unavailable-id") {
 
+            reject(
+              new Error(
+                "This room code is already being used. Please create a new game."
+              )
+            );
 
-      conn.on('close', () => {
+          } else {
 
-        console.log(
-          'Player disconnected:',
-          conn.peer
-        );
+            reject(error);
 
-        delete this.connections[conn.peer];
-
-        this.onMessageCallback(
-          conn.peer,
-          {
-            type: 'CLIENT_DISCONNECTED'
           }
-        );
-      });
+
+        });
 
 
-      conn.on('error', error => {
+        this.peer.on("disconnected", () => {
 
-        console.error(
-          'Connection error:',
-          error
-        );
-      });
+          console.warn("Host Peer disconnected from signaling server.");
+
+          /*
+            Try reconnecting automatically.
+          */
+
+          try {
+            this.peer.reconnect();
+          } catch (e) {
+            console.error(e);
+          }
+
+        });
+
+      } catch (error) {
+
+        reject(error);
+
+      }
+
+    });
+  }
+
+
+  setupHostConnection(conn) {
+
+    conn.on("open", () => {
+
+      console.log("Player connection opened:", conn.peer);
+
+      this.connections.set(conn.peer, conn);
 
     });
 
 
-    this.peer.on('error', error => {
+    conn.on("data", data => {
 
-      console.error(
-        'HOST PEER ERROR:',
-        error
-      );
+      console.log("Host received:", data);
 
-      if (error.type === 'unavailable-id') {
-
-        showToast(
-          'That room code is already being used. Create another room.',
-          'error'
-        );
-      } else {
-
-        showToast(
-          'Host connection error: ' + error.type,
-          'error'
-        );
+      if (this.onData) {
+        this.onData(data, conn);
       }
+
+    });
+
+
+    conn.on("close", () => {
+
+      console.log("Player disconnected:", conn.peer);
+
+      this.connections.delete(conn.peer);
+
+    });
+
+
+    conn.on("error", error => {
+
+      console.error("Player connection error:", error);
+
+      this.connections.delete(conn.peer);
+
     });
 
   }
 
+
+  broadcast(data) {
+
+    this.connections.forEach((conn, peerId) => {
+
+      try {
+
+        if (conn.open) {
+          conn.send(data);
+        }
+
+      } catch (error) {
+
+        console.error("Broadcast error:", error);
+
+      }
+
+    });
+
+  }
+
+
+  sendTo(peerId, data) {
+
+    const conn = this.connections.get(peerId);
+
+    if (!conn) {
+      console.warn("No connection for:", peerId);
+      return false;
+    }
+
+    try {
+
+      if (conn.open) {
+
+        conn.send(data);
+        return true;
+
+      }
+
+    } catch (error) {
+
+      console.error("Send error:", error);
+
+    }
+
+    return false;
+  }
+
+
+  /*
+    Client initialization.
+
+    The room code is converted into the exact same PeerJS host ID
+    used by the host.
+  */
 
   initClient(roomCode, playerId, playerName, callback) {
 
     this.isHost = false;
+    this.onData = callback;
 
-    this.roomCode = roomCode;
+    const cleanRoom = roomCode.trim().toLowerCase();
 
-    this.onMessageCallback = callback;
+    this.hostPeerId = `whispers-dark-${cleanRoom}`;
 
-    const hostPeerId =
-      `whispers-dark-${roomCode.toLowerCase()}`;
+    return new Promise((resolve, reject) => {
 
-    console.log(
-      'Connecting to host:',
-      hostPeerId
-    );
+      try {
 
+        /*
+          IMPORTANT:
 
-    try {
+          The client gets its own random Peer ID.
 
-      this.peer = new Peer({
-        debug: 2
-      });
+          This prevents collisions between phones.
+        */
 
-    } catch (error) {
-
-      console.error(error);
-
-      showToast(
-        'Could not start connection.',
-        'error'
-      );
-
-      return;
-    }
-
-
-    this.peer.on('open', clientPeerId => {
-
-      console.log(
-        'CLIENT PEER OPEN:',
-        clientPeerId
-      );
-
-      showToast('Connecting to host...');
-
-
-      this.hostConn =
-        this.peer.connect(hostPeerId, {
-          reliable: true
+        this.peer = new Peer(undefined, {
+          debug: 2
         });
 
 
-      this.hostConn.on('open', () => {
+        this.peer.on("open", clientPeerId => {
 
-        console.log(
-          'CONNECTED TO HOST'
-        );
+          console.log("Client Peer connected:", clientPeerId);
 
-        this.connected = true;
+          const conn = this.peer.connect(
+            this.hostPeerId,
+            {
+              reliable: true
+            }
+          );
 
-        showToast('Connected to host!');
+          this.clientConnection = conn;
 
 
-        // IMPORTANT:
-        // Only send the join request after
-        // PeerJS says the connection is open.
+          conn.on("open", () => {
 
-        this.hostConn.send({
+            console.log("Connected to host!");
 
-          type: 'JOIN_REQUEST',
+            conn.send({
+              type: "JOIN_REQUEST",
+              playerId,
+              name: playerName,
+              peerId: clientPeerId
+            });
 
-          player: {
+            resolve(conn);
 
-            id: playerId,
+          });
 
-            name: playerName
 
+          conn.on("data", data => {
+
+            console.log("Client received:", data);
+
+            if (this.onData) {
+              this.onData(data);
+            }
+
+          });
+
+
+          conn.on("close", () => {
+
+            console.warn("Connection to host closed.");
+
+            showJoinStatus(
+              "Connection to host was closed.",
+              false
+            );
+
+          });
+
+
+          conn.on("error", error => {
+
+            console.error("Client connection error:", error);
+
+            reject(error);
+
+          });
+
+        });
+
+
+        this.peer.on("error", error => {
+
+          console.error("Client Peer error:", error);
+
+          let message = "Could not connect to the host.";
+
+          if (error.type === "peer-unavailable") {
+
+            message =
+              "Room not found. Make sure the host has the game open and the room code is correct.";
+
+          }
+
+          if (error.type === "network") {
+
+            message =
+              "Network connection problem. Check your internet connection.";
+
+          }
+
+          reject(new Error(message));
+
+        });
+
+
+        this.peer.on("disconnected", () => {
+
+          console.warn("Client disconnected from PeerJS.");
+
+          try {
+            this.peer.reconnect();
+          } catch (e) {
+            console.error(e);
           }
 
         });
 
-      });
+      } catch (error) {
 
-
-      this.hostConn.on('data', data => {
-
-        console.log(
-          'CLIENT RECEIVED:',
-          data
-        );
-
-        this.onMessageCallback(data);
-      });
-
-
-      this.hostConn.on('close', () => {
-
-        this.connected = false;
-
-        showToast(
-          'Disconnected from host.',
-          'error'
-        );
-      });
-
-
-      this.hostConn.on('error', error => {
-
-        console.error(
-          'CLIENT CONNECTION ERROR:',
-          error
-        );
-
-        showToast(
-          'Could not connect to room.',
-          'error'
-        );
-      });
-
-    });
-
-
-    this.peer.on('error', error => {
-
-      console.error(
-        'CLIENT PEER ERROR:',
-        error
-      );
-
-      if (error.type === 'peer-unavailable') {
-
-        showToast(
-          'Room not found. Check the room code.',
-          'error'
-        );
-
-      } else {
-
-        showToast(
-          'Connection error: ' + error.type,
-          'error'
-        );
-      }
-    });
-
-  }
-
-
-  sendToHost(payload) {
-
-    if (
-      this.hostConn &&
-      this.hostConn.open
-    ) {
-
-      console.log(
-        'SEND HOST:',
-        payload
-      );
-
-      this.hostConn.send(payload);
-
-    } else {
-
-      console.warn(
-        'Host connection is not open.'
-      );
-
-      showToast(
-        'Not connected to host.',
-        'error'
-      );
-    }
-  }
-
-
-  sendToClient(peerId, payload) {
-
-    const conn =
-      this.connections[peerId];
-
-    if (conn && conn.open) {
-
-      console.log(
-        'SEND PLAYER:',
-        peerId,
-        payload
-      );
-
-      conn.send(payload);
-
-    } else {
-
-      console.warn(
-        'No connection for player:',
-        peerId
-      );
-    }
-  }
-
-
-  broadcastToClients(payload) {
-
-    console.log(
-      'BROADCAST:',
-      payload
-    );
-
-    Object.values(this.connections).forEach(
-      conn => {
-
-        if (conn && conn.open) {
-
-          conn.send(payload);
-        }
+        reject(error);
 
       }
-    );
+
+    });
   }
 
 
   destroy() {
 
-    Object.values(this.connections).forEach(
-      conn => {
+    try {
+
+      this.connections.forEach(conn => {
 
         try {
           conn.close();
         } catch {}
+
+      });
+
+      this.connections.clear();
+
+      if (this.clientConnection) {
+        try {
+          this.clientConnection.close();
+        } catch {}
       }
-    );
 
-    if (this.hostConn) {
+      if (this.peer) {
+        try {
+          this.peer.destroy();
+        } catch {}
+      }
 
-      try {
-        this.hostConn.close();
-      } catch {}
+    } catch (error) {
+
+      console.error(error);
+
     }
-
-    if (this.peer) {
-
-      try {
-        this.peer.destroy();
-      } catch {}
-    }
-
-    this.connections = {};
 
     this.peer = null;
+
   }
+
 }
 
 
@@ -1384,2407 +933,304 @@ const net = new NetworkEngine();
    GAME STATE
 ============================================================ */
 
-const GAME_PHASES = {
-
-  LOBBY: 'LOBBY',
-
-  NIGHT: 'NIGHT',
-
-  DAY_REVEAL: 'DAY_REVEAL',
-
-  DAY_VOTE: 'DAY_VOTE',
-
-  GAME_OVER: 'GAME_OVER'
-};
-
-
-const ROLES = {
-
-  MURDERER: 'MURDERER',
-
-  DETECTIVE: 'DETECTIVE',
-
-  DOCTOR: 'DOCTOR',
-
-  INNOCENT: 'INNOCENT'
-};
-
-
 let hostState = {
 
-  roomCode: '',
+  roomCode: "",
 
-  phase: GAME_PHASES.LOBBY,
+  phase: "LOBBY",
 
   players: {},
 
   roleCounts: {
-
-    murderers: 2,
-
-    detectives: 1,
-
-    doctors: 1
+    murderer: 2,
+    detective: 1,
+    doctor: 1
   },
 
-  nightActions: {
+  murdererTarget: null,
 
-    murdererTarget: null,
+  doctorTarget: null,
 
-    doctorTarget: null,
+  detectiveTarget: null,
 
-    detectiveTarget: null
-  },
+  nightActions: {},
 
-  lastKilled: null,
+  votes: {},
 
-  savedByDoctor: false,
+  winner: null,
 
-  timerSeconds: 0,
+  timer: null,
 
-  timerInterval: null
+  timerSeconds: 0
+
 };
 
 
 let localPlayer = {
 
-  id:
-    'player_' +
-    Math.random()
-      .toString(36)
-      .substring(2, 10),
+  id: "",
 
-  name: '',
+  peerId: "",
 
-  roomCode: '',
+  name: "",
 
   role: null,
 
-  isAlive: true,
+  alive: true,
 
   hasSubmittedNightAction: false,
 
   hasVoted: false
+
 };
 
 
 /* ============================================================
-   VIEWS
+   PLAYER ID
 ============================================================ */
 
-const views = {
+function getPersistentPlayerId() {
 
-  landing:
-    document.getElementById('view-landing'),
+  const key = "whispers-dark-player-id";
 
-  join:
-    document.getElementById('view-join'),
+  let id = localStorage.getItem(key);
 
-  hostLobby:
-    document.getElementById('view-host-lobby'),
+  if (!id) {
 
-  hostGame:
-    document.getElementById('view-host-game'),
+    id =
+      "player-" +
+      Date.now() +
+      "-" +
+      Math.random().toString(36).substring(2, 10);
 
-  player:
-    document.getElementById('view-player'),
+    localStorage.setItem(key, id);
 
-  gameOver:
-    document.getElementById('view-game-over')
-};
-
-
-function showView(view) {
-
-  Object.values(views).forEach(
-    v => v.classList.add('hidden')
-  );
-
-  view.classList.remove('hidden');
-
-  lucide.createIcons();
-}
-
-
-/* ============================================================
-   TOAST
-============================================================ */
-
-function showToast(
-  message,
-  type = 'info'
-) {
-
-  const container =
-    document.getElementById(
-      'toast-container'
-    );
-
-  const toast =
-    document.createElement('div');
-
-  toast.className =
-    `glass-panel px-4 py-2.5 rounded-xl
-     text-xs md:text-sm font-semibold shadow-xl
-     border ${
-       type === 'error'
-         ? 'border-crimson-500 text-crimson-400'
-         : 'border-slate-700 text-slate-200'
-     }`;
-
-  toast.textContent = message;
-
-  container.appendChild(toast);
-
-  setTimeout(
-    () => toast.remove(),
-    3000
-  );
-}
-
-
-/* ============================================================
-   QR / URL
-============================================================ */
-
-function getJoinURL(roomCode) {
-
-  const room =
-    encodeURIComponent(roomCode);
-
-  const pathname =
-    window.location.pathname;
-
-
-  /*
-    If deployed online:
-    https://your-site.com/?room=ABCD
-  */
-
-  const hostname =
-    window.location.hostname;
-
-
-  if (
-    hostname !== 'localhost' &&
-    hostname !== '127.0.0.1' &&
-    hostname !== ''
-  ) {
-
-    return `${window.location.origin}${pathname}?room=${room}`;
   }
 
-
-  /*
-    LOCAL DEVELOPMENT
-
-    We determine the computer's address from
-    the browser's current URL if possible.
-
-    If you are opening localhost, you MUST set
-    LOCAL_NETWORK_IP below.
-  */
-
-  const LOCAL_NETWORK_IP =
-    '192.168.1.100';
-
-
-  const port =
-    window.location.port
-      ? ':' + window.location.port
-      : '';
-
-
-  return `http://${LOCAL_NETWORK_IP}${port}${pathname}?room=${room}`;
+  return id;
 }
 
 
 /* ============================================================
-   DOM READY
+   JOIN STATUS
 ============================================================ */
 
-window.addEventListener(
-  'DOMContentLoaded',
-  () => {
+function showJoinStatus(message, success = false) {
 
-    lucide.createIcons();
+  const box = document.getElementById("join-status");
 
+  box.classList.remove("hidden");
 
-    const params =
-      new URLSearchParams(
-        window.location.search
-      );
+  box.className =
+    "mt-5 rounded-xl p-4 text-center text-sm " +
+    (success
+      ? "bg-green-950/40 text-green-400 border border-green-900/50"
+      : "bg-red-950/40 text-red-400 border border-red-900/50");
 
-    const room =
-      params.get('room');
+  box.textContent = message;
 
-
-    if (room) {
-
-      document.getElementById(
-        'input-room-code'
-      ).value =
-        room.toUpperCase();
-
-      showView(views.join);
-    }
-
-  }
-);
-
-
-/* ============================================================
-   SOUND BUTTON
-============================================================ */
-
-document
-  .getElementById('sound-toggle-btn')
-  .addEventListener(
-    'click',
-    () => {
-
-      audio.muted =
-        !audio.muted;
-
-      const icon =
-        document.getElementById(
-          'sound-icon'
-        );
-
-      icon.setAttribute(
-        'data-lucide',
-        audio.muted
-          ? 'volume-x'
-          : 'volume-2'
-      );
-
-      lucide.createIcons();
-    }
-  );
-
-
-/* ============================================================
-   HOST CREATION
-============================================================ */
-
-document
-  .getElementById('btn-choice-host')
-  .addEventListener(
-    'click',
-    () => {
-
-      audio.init();
-
-
-      // Clean up previous peer
-      net.destroy();
-
-
-      const roomCode =
-        net.generateRoomCode();
-
-
-      hostState.roomCode =
-        roomCode;
-
-
-      hostState.phase =
-        GAME_PHASES.LOBBY;
-
-
-      hostState.players = {};
-
-
-      document.getElementById(
-        'display-room-code'
-      ).textContent =
-        roomCode;
-
-
-      // Generate QR
-
-      const qrContainer =
-        document.getElementById(
-          'qrcode'
-        );
-
-      qrContainer.innerHTML = '';
-
-
-      const joinURL =
-        getJoinURL(roomCode);
-
-
-      console.log(
-        'JOIN URL:',
-        joinURL
-      );
-
-
-      new QRCode(
-        qrContainer,
-        {
-          text: joinURL,
-
-          width: 120,
-
-          height: 120,
-
-          colorDark: '#08080a',
-
-          colorLight: '#ffffff',
-
-          correctLevel:
-            QRCode.CorrectLevel.H
-        }
-      );
-
-
-      document.getElementById(
-        'network-address'
-      ).textContent =
-        joinURL;
-
-
-      document
-        .getElementById('btn-copy-link')
-        .onclick =
-        async () => {
-
-          try {
-
-            await navigator.clipboard.writeText(
-              joinURL
-            );
-
-            showToast(
-              'Join link copied!'
-            );
-
-          } catch {
-
-            showToast(
-              'Copy failed. Use the QR code.',
-              'error'
-            );
-          }
-        };
-
-
-      net.initHost(
-        roomCode,
-        handleHostReceivedData
-      );
-
-
-      showView(
-        views.hostLobby
-      );
-
-
-      updateHostLobbyUI();
-
-    }
-  );
-
-
-/* ============================================================
-   MANUAL JOIN BUTTON
-============================================================ */
-
-document
-  .getElementById('btn-choice-join')
-  .addEventListener(
-    'click',
-    () => {
-
-      audio.init();
-
-      showView(views.join);
-    }
-  );
-
-
-/* ============================================================
-   BACK BUTTON
-============================================================ */
-
-document
-  .querySelectorAll('.btn-back')
-  .forEach(
-    button => {
-
-      button.addEventListener(
-        'click',
-        () => {
-
-          showView(
-            views.landing
-          );
-        }
-      );
-
-    }
-  );
-
-
-/* ============================================================
-   PLAYER JOIN
-============================================================ */
-
-document
-  .getElementById('form-join')
-  .addEventListener(
-    'submit',
-    event => {
-
-      event.preventDefault();
-
-
-      const roomCode =
-        document
-          .getElementById(
-            'input-room-code'
-          )
-          .value
-          .trim()
-          .toUpperCase();
-
-
-      const name =
-        document
-          .getElementById(
-            'input-player-name'
-          )
-          .value
-          .trim();
-
-
-      if (
-        roomCode.length !== 4
-      ) {
-
-        showToast(
-          'Room code must be 4 characters.',
-          'error'
-        );
-
-        return;
-      }
-
-
-      if (!name) {
-
-        showToast(
-          'Enter your name.',
-          'error'
-        );
-
-        return;
-      }
-
-
-      localPlayer.roomCode =
-        roomCode;
-
-      localPlayer.name =
-        name;
-
-
-      document.getElementById(
-        'player-display-name'
-      ).textContent =
-        name;
-
-
-      document.getElementById(
-        'player-room-badge'
-      ).textContent =
-        roomCode;
-
-
-      document.getElementById(
-        'player-avatar'
-      ).textContent =
-        name
-          .charAt(0)
-          .toUpperCase();
-
-
-      document.getElementById(
-        'player-status-tag'
-      ).textContent =
-        'Connecting';
-
-
-      renderPlayerWaitScreen(
-        'Connecting to host...'
-      );
-
-
-      showView(
-        views.player
-      );
-
-
-      net.destroy();
-
-
-      net.initClient(
-        roomCode,
-
-        localPlayer.id,
-
-        localPlayer.name,
-
-        handleClientReceivedData
-      );
-
-    }
-  );
-
-
-/* ============================================================
-   ROLE ADJUSTMENT
-============================================================ */
-
-document
-  .querySelectorAll('.role-adj-btn')
-  .forEach(
-    button => {
-
-      button.addEventListener(
-        'click',
-        event => {
-
-          const role =
-            event.currentTarget.dataset.role;
-
-          const change =
-            Number(
-              event.currentTarget.dataset.change
-            );
-
-
-          const current =
-            hostState.roleCounts[role];
-
-
-          hostState.roleCounts[role] =
-            Math.max(
-              1,
-              Math.min(
-                8,
-                current + change
-              )
-            );
-
-
-          document.getElementById(
-            `cfg-${role}`
-          ).textContent =
-            hostState.roleCounts[role];
-
-
-          updateInnocentCount();
-        }
-      );
-
-    }
-  );
-
-
-function updateInnocentCount() {
-
-  const total =
-    Object.keys(
-      hostState.players
-    ).length;
-
-
-  const special =
-    hostState.roleCounts.murderers +
-    hostState.roleCounts.detectives +
-    hostState.roleCounts.doctors;
-
-
-  const innocents =
-    Math.max(
-      0,
-      total - special
-    );
-
-
-  document.getElementById(
-    'cfg-innocents'
-  ).textContent =
-    innocents;
 }
 
 
 /* ============================================================
-   START GAME
+   HOST
 ============================================================ */
 
-document
-  .getElementById('btn-start-game')
-  .addEventListener(
-    'click',
-    () => {
+async function createGame() {
 
-      const players =
-        Object.values(
-          hostState.players
-        );
+  const roomCode = generateRoomCode();
 
+  hostState = {
 
-      if (players.length < 4) {
+    roomCode,
 
-        showToast(
-          'At least 4 players are required.',
-          'error'
-        );
+    phase: "LOBBY",
 
-        return;
-      }
+    players: {},
 
+    roleCounts: {
+      murderer: 2,
+      detective: 1,
+      doctor: 1
+    },
 
-      const specialCount =
-        hostState.roleCounts.murderers +
-        hostState.roleCounts.detectives +
-        hostState.roleCounts.doctors;
+    murdererTarget: null,
 
+    doctorTarget: null,
 
-      if (
-        specialCount >= players.length
-      ) {
+    detectiveTarget: null,
 
-        showToast(
-          'You need at least one Innocent.',
-          'error'
-        );
+    nightActions: {},
 
-        return;
-      }
+    votes: {},
 
+    winner: null,
 
-      assignRoles();
+    timer: null,
 
+    timerSeconds: 0
 
-      hostState.phase =
-        GAME_PHASES.NIGHT;
-
-
-      players.forEach(
-        player => {
-
-          net.sendToClient(
-            player.peerId,
-            {
-              type: 'ROLE_ASSIGNMENT',
-
-              role: player.role,
-
-              players:
-                getPublicPlayerList()
-            }
-          );
-
-        }
-      );
-
-
-      net.broadcastToClients({
-        type: 'PHASE_CHANGE',
-
-        phase:
-          GAME_PHASES.NIGHT,
-
-        players:
-          getPublicPlayerList()
-      });
-
-
-      showView(
-        views.hostGame
-      );
-
-
-      startNightPhase();
-
-    }
-  );
-
-
-/* ============================================================
-   HOST MESSAGE HANDLER
-============================================================ */
-
-function handleHostReceivedData(
-  peerId,
-  data
-) {
-
-  if (!data) return;
-
-
-  switch (data.type) {
-
-
-    case 'JOIN_REQUEST': {
-
-      if (
-        hostState.phase !==
-        GAME_PHASES.LOBBY
-      ) {
-
-        net.sendToClient(
-          peerId,
-          {
-            type: 'ERROR',
-
-            message:
-              'Game already started.'
-          }
-        );
-
-        return;
-      }
-
-
-      const player =
-        data.player;
-
-
-      if (!player) return;
-
-
-      if (
-        Object.keys(
-          hostState.players
-        ).length >= 20
-      ) {
-
-        net.sendToClient(
-          peerId,
-          {
-            type: 'ERROR',
-
-            message:
-              'Room is full.'
-          }
-        );
-
-        return;
-      }
-
-
-      // Prevent duplicate players
-
-      const existing =
-        Object.values(
-          hostState.players
-        ).find(
-          p => p.id === player.id
-        );
-
-
-      if (existing) {
-
-        existing.peerId =
-          peerId;
-
-        net.sendToClient(
-          peerId,
-          {
-            type: 'JOIN_SUCCESS',
-
-            playerId:
-              existing.id
-          }
-        );
-
-        return;
-      }
-
-
-      hostState.players[
-        player.id
-      ] = {
-
-        id:
-          player.id,
-
-        peerId:
-          peerId,
-
-        name:
-          sanitizeName(player.name),
-
-        role:
-          null,
-
-        isAlive:
-          true,
-
-        vote:
-          null
-      };
-
-
-      console.log(
-        'PLAYER ADDED:',
-        hostState.players[player.id]
-      );
-
-
-      updateHostLobbyUI();
-
-
-      showToast(
-        `${player.name} joined!`
-      );
-
-
-      net.sendToClient(
-        peerId,
-        {
-          type: 'JOIN_SUCCESS',
-
-          playerId:
-            player.id,
-
-          roomCode:
-            hostState.roomCode
-        }
-      );
-
-
-      break;
-    }
-
-
-    case 'NIGHT_ACTION':
-
-      handleNightActionSubmit(
-        peerId,
-
-        data.action,
-
-        data.targetId
-      );
-
-      break;
-
-
-    case 'CAST_VOTE':
-
-      handleVoteSubmit(
-        peerId,
-
-        data.targetId
-      );
-
-      break;
-
-
-    case 'CLIENT_DISCONNECTED': {
-
-      const player =
-        Object.values(
-          hostState.players
-        ).find(
-          p => p.peerId === peerId
-        );
-
-
-      if (player) {
-
-        showToast(
-          `${player.name} disconnected.`
-        );
-      }
-
-      break;
-    }
-
-  }
-}
-
-
-/* ============================================================
-   SANITIZE PLAYER NAME
-============================================================ */
-
-function sanitizeName(name) {
-
-  return String(name)
-    .replace(/[<>]/g, '')
-    .trim()
-    .substring(0, 14);
-}
-
-
-/* ============================================================
-   HOST LOBBY UI
-============================================================ */
-
-function updateHostLobbyUI() {
-
-  const list =
-    document.getElementById(
-      'host-player-list'
-    );
-
-
-  const players =
-    Object.values(
-      hostState.players
-    );
-
-
-  document.getElementById(
-    'player-count'
-  ).textContent =
-    players.length;
-
-
-  if (players.length === 0) {
-
-    list.innerHTML = `
-
-      <div class="col-span-full flex flex-col
-                  items-center justify-center py-12
-                  text-slate-500 text-center space-y-2">
-
-        <i data-lucide="radio"
-           class="w-8 h-8 animate-pulse text-crimson-500">
-        </i>
-
-        <p class="text-sm">
-          Waiting for players to scan the QR code...
-        </p>
-
-      </div>
-
-    `;
-
-  } else {
-
-    list.innerHTML =
-      players.map(
-        player => `
-
-        <div class="bg-noir-950 p-3 rounded-2xl
-                    border border-slate-800 flex items-center gap-3">
-
-          <div class="w-8 h-8 rounded-full
-                      bg-crimson-900/40
-                      text-crimson-400
-                      border border-crimson-800
-                      flex items-center justify-center
-                      font-bold text-xs">
-
-            ${escapeHTML(
-              player.name.charAt(0).toUpperCase()
-            )}
-
-          </div>
-
-          <div class="truncate text-sm font-semibold text-slate-200">
-
-            ${escapeHTML(player.name)}
-
-          </div>
-
-        </div>
-
-      `
-      ).join('');
-  }
-
-
-  document.getElementById(
-    'btn-start-game'
-  ).disabled =
-    players.length < 4;
-
-
-  updateInnocentCount();
-
-
-  lucide.createIcons();
-}
-
-
-/* ============================================================
-   ESCAPE HTML
-============================================================ */
-
-function escapeHTML(value) {
-
-  const div =
-    document.createElement('div');
-
-  div.textContent =
-    value;
-
-  return div.innerHTML;
-}
-
-
-/* ============================================================
-   ASSIGN ROLES
-============================================================ */
-
-function assignRoles() {
-
-  const players =
-    Object.values(
-      hostState.players
-    );
-
-
-  const shuffled =
-    [...players].sort(
-      () => Math.random() - .5
-    );
-
-
-  let index = 0;
-
-
-  shuffled.forEach(
-    player => {
-
-      if (
-        index <
-        hostState.roleCounts.murderers
-      ) {
-
-        player.role =
-          ROLES.MURDERER;
-
-      } else if (
-        index <
-        hostState.roleCounts.murderers +
-        hostState.roleCounts.detectives
-      ) {
-
-        player.role =
-          ROLES.DETECTIVE;
-
-      } else if (
-        index <
-        hostState.roleCounts.murderers +
-        hostState.roleCounts.detectives +
-        hostState.roleCounts.doctors
-      ) {
-
-        player.role =
-          ROLES.DOCTOR;
-
-      } else {
-
-        player.role =
-          ROLES.INNOCENT;
-      }
-
-
-      player.isAlive =
-        true;
-
-      player.vote =
-        null;
-
-
-      index++;
-    }
-  );
-}
-
-
-/* ============================================================
-   PUBLIC PLAYER LIST
-============================================================ */
-
-function getPublicPlayerList() {
-
-  return Object.values(
-    hostState.players
-  ).map(
-    player => ({
-
-      id:
-        player.id,
-
-      name:
-        player.name,
-
-      isAlive:
-        player.isAlive
-    })
-  );
-}
-
-
-/* ============================================================
-   NIGHT
-============================================================ */
-
-function startNightPhase() {
-
-  hostState.phase =
-    GAME_PHASES.NIGHT;
-
-
-  hostState.nightActions = {
-
-    murdererTarget:
-      null,
-
-    doctorTarget:
-      null,
-
-    detectiveTarget:
-      null
   };
 
 
-  hostState.lastKilled =
-    null;
+  document.getElementById("host-room-code").textContent =
+    roomCode;
 
-  hostState.savedByDoctor =
-    false;
 
+  /*
+    Generate QR using the PUBLIC URL.
 
-  audio.playPhaseChime(true);
+    This is the main mobile joining fix.
+  */
 
+  const joinURL = getJoinURL(roomCode);
 
-  setHostPhase(
-    'NIGHT PHASE',
+  console.log("QR Join URL:", joinURL);
 
-    'Ask Everyone To Close Their Eyes'
-  );
+  const qrContainer = document.getElementById("qrcode");
 
+  qrContainer.innerHTML = "";
 
-  renderHostRoster();
+  new QRCode(qrContainer, {
 
+    text: joinURL,
 
-  document.getElementById(
-    'host-dynamic-stage'
-  ).innerHTML = `
+    width: 220,
 
-    <div class="flex flex-col items-center
-                justify-center py-10 text-center
-                space-y-5">
+    height: 220,
 
-      <i data-lucide="moon"
-         class="w-16 h-16 text-crimson-500 animate-pulse">
-      </i>
+    colorDark: "#000000",
 
-      <h4 class="text-2xl font-serif text-slate-200">
-        The Night Has Fallen
-      </h4>
+    colorLight: "#ffffff",
 
-      <div class="bg-noir-950 p-5 rounded-2xl
-                  border border-slate-800
-                  max-w-lg text-left text-sm space-y-3">
-
-        <p>
-          <strong class="text-crimson-400">
-            Murderers:
-          </strong>
-          choose someone to eliminate.
-        </p>
-
-        <p>
-          <strong class="text-emerald-400">
-            Doctor:
-          </strong>
-          choose someone to protect.
-        </p>
-
-        <p>
-          <strong class="text-blue-400">
-            Detective:
-          </strong>
-          choose someone to investigate.
-        </p>
-
-        <p class="text-slate-500">
-          Innocents simply wait for morning.
-        </p>
-
-      </div>
-
-    </div>
-
-  `;
-
-
-  updateNightTrackerUI();
-
-
-  startTimer(
-    45,
-    resolveNightPhase
-  );
-
-
-  lucide.createIcons();
-}
-
-
-/* ============================================================
-   HOST PHASE UI
-============================================================ */
-
-function setHostPhase(
-  badge,
-  title
-) {
-
-  document.getElementById(
-    'host-phase-badge'
-  ).textContent =
-    badge;
-
-
-  document.getElementById(
-    'host-phase-title'
-  ).textContent =
-    title;
-}
-
-
-/* ============================================================
-   NIGHT ACTION
-============================================================ */
-
-function handleNightActionSubmit(
-  peerId,
-  action,
-  targetId
-) {
-
-  const player =
-    Object.values(
-      hostState.players
-    ).find(
-      p => p.peerId === peerId
-    );
-
-
-  if (!player) return;
-
-  if (!player.isAlive) return;
-
-  if (
-    hostState.phase !==
-    GAME_PHASES.NIGHT
-  ) return;
-
-
-  const target =
-    hostState.players[targetId];
-
-
-  if (!target || !target.isAlive) {
-
-    return;
-  }
-
-
-  if (
-    target.id ===
-    player.id
-  ) {
-
-    return;
-  }
-
-
-  if (
-    action === ROLES.MURDERER &&
-    player.role === ROLES.MURDERER
-  ) {
-
-    hostState.nightActions.murdererTarget =
-      targetId;
-
-  } else if (
-    action === ROLES.DOCTOR &&
-    player.role === ROLES.DOCTOR
-  ) {
-
-    hostState.nightActions.doctorTarget =
-      targetId;
-
-  } else if (
-    action === ROLES.DETECTIVE &&
-    player.role === ROLES.DETECTIVE
-  ) {
-
-    hostState.nightActions.detectiveTarget =
-      targetId;
-
-
-    net.sendToClient(
-      peerId,
-      {
-        type: 'INVESTIGATION_RESULT',
-
-        targetName:
-          target.name,
-
-        isMurderer:
-          target.role ===
-          ROLES.MURDERER
-      }
-    );
-  }
-
-
-  updateNightTrackerUI();
-
-
-  const murderSubmitted =
-    !!hostState.nightActions.murdererTarget;
-
-  const doctorSubmitted =
-    !!hostState.nightActions.doctorTarget;
-
-  const detectiveSubmitted =
-    !!hostState.nightActions.detectiveTarget;
-
-
-  const activeRoles =
-    new Set(
-      Object.values(
-        hostState.players
-      )
-      .filter(
-        p =>
-          p.isAlive &&
-          p.role !== ROLES.INNOCENT
-      )
-      .map(
-        p => p.role
-      )
-    );
-
-
-  let required =
-    activeRoles.size;
-
-
-  let submitted = 0;
-
-
-  if (
-    murderSubmitted &&
-    activeRoles.has(
-      ROLES.MURDERER
-    )
-  ) submitted++;
-
-
-  if (
-    doctorSubmitted &&
-    activeRoles.has(
-      ROLES.DOCTOR
-    )
-  ) submitted++;
-
-
-  if (
-    detectiveSubmitted &&
-    activeRoles.has(
-      ROLES.DETECTIVE
-    )
-  ) submitted++;
-
-
-  if (
-    required > 0 &&
-    submitted >= required
-  ) {
-
-    clearInterval(
-      hostState.timerInterval
-    );
-
-
-    setTimeout(
-      resolveNightPhase,
-      800
-    );
-  }
-}
-
-
-/* ============================================================
-   NIGHT TRACKER
-============================================================ */
-
-function updateNightTrackerUI() {
-
-  let count = 0;
-
-
-  if (
-    hostState.nightActions.murdererTarget
-  ) count++;
-
-
-  if (
-    hostState.nightActions.doctorTarget
-  ) count++;
-
-
-  if (
-    hostState.nightActions.detectiveTarget
-  ) count++;
-
-
-  document.getElementById(
-    'night-action-tracker'
-  ).textContent =
-    `${count} Night Submissions`;
-}
-
-
-/* ============================================================
-   RESOLVE NIGHT
-============================================================ */
-
-function resolveNightPhase() {
-
-  clearInterval(
-    hostState.timerInterval
-  );
-
-
-  const targetId =
-    hostState.nightActions
-      .murdererTarget;
-
-
-  const savedId =
-    hostState.nightActions
-      .doctorTarget;
-
-
-  let killedPlayer =
-    null;
-
-
-  if (
-    targetId &&
-    targetId !== savedId
-  ) {
-
-    killedPlayer =
-      hostState.players[targetId];
-
-
-    if (killedPlayer) {
-
-      killedPlayer.isAlive =
-        false;
-    }
-  }
-
-
-  hostState.lastKilled =
-    killedPlayer;
-
-
-  hostState.savedByDoctor =
-    !!(
-      targetId &&
-      targetId === savedId
-    );
-
-
-  startDayPhase();
-}
-
-
-/* ============================================================
-   DAY
-============================================================ */
-
-function startDayPhase() {
-
-  hostState.phase =
-    GAME_PHASES.DAY_REVEAL;
-
-
-  audio.playPhaseChime(false);
-
-
-  setHostPhase(
-    'DAY PHASE',
-    'Everyone Open Your Eyes!'
-  );
-
-
-  renderHostRoster();
-
-
-  net.broadcastToClients({
-
-    type: 'PHASE_CHANGE',
-
-    phase:
-      GAME_PHASES.DAY_REVEAL,
-
-    players:
-      getPublicPlayerList(),
-
-    lastKilledName:
-      hostState.lastKilled
-        ? hostState.lastKilled.name
-        : null,
-
-    savedByDoctor:
-      hostState.savedByDoctor
+    correctLevel: QRCode.CorrectLevel.H
 
   });
 
 
-  const killed =
-    hostState.lastKilled;
+  try {
 
-
-  document.getElementById(
-    'host-dynamic-stage'
-  ).innerHTML = `
-
-    <div class="glass-panel p-6 rounded-2xl
-                border border-slate-800
-                text-center space-y-5">
-
-      ${
-        killed
-
-        ? `
-
-          <div class="inline-flex p-4
-                      bg-crimson-950
-                      border border-crimson-700
-                      rounded-full blood-glow">
-
-            <i data-lucide="skull"
-               class="w-12 h-12 text-crimson-500">
-            </i>
-
-          </div>
-
-          <h3 class="text-3xl font-serif font-bold text-white">
-
-            ${escapeHTML(killed.name)}
-            Was Eliminated!
-
-          </h3>
-
-          <p class="text-sm text-slate-400">
-            The town must discuss who they suspect.
-          </p>
-
-        `
-
-        : `
-
-          <div class="inline-flex p-4
-                      bg-emerald-950
-                      border border-emerald-700
-                      rounded-full">
-
-            <i data-lucide="shield-check"
-               class="w-12 h-12 text-emerald-400">
-            </i>
-
-          </div>
-
-          <h3 class="text-3xl font-serif font-bold text-white">
-            Nobody Was Eliminated!
-          </h3>
-
-          <p class="text-sm text-slate-400">
-            ${
-              hostState.savedByDoctor
-                ? 'The Doctor protected the target.'
-                : 'The night passed without an elimination.'
-            }
-          </p>
-
-        `
-      }
-
-
-      <button
-        id="btn-start-vote"
-        class="px-6 py-3 bg-crimson-600
-               hover:bg-crimson-500 text-white
-               font-bold rounded-xl"
-      >
-        Open Mobile Voting
-      </button>
-
-    </div>
-
-  `;
-
-
-  document
-    .getElementById('btn-start-vote')
-    .addEventListener(
-      'click',
-      openTownVoting
+    await net.initHost(
+      roomCode,
+      handleHostReceivedData
     );
 
+    showView("host-lobby-view");
 
-  lucide.createIcons();
+    renderHostRoster();
 
+  } catch (error) {
 
-  if (
-    checkWinConditions()
-  ) return;
-}
+    console.error(error);
 
-
-/* ============================================================
-   OPEN VOTING
-============================================================ */
-
-function openTownVoting() {
-
-  hostState.phase =
-    GAME_PHASES.DAY_VOTE;
-
-
-  Object.values(
-    hostState.players
-  ).forEach(
-    player => {
-
-      player.vote =
-        null;
-    }
-  );
-
-
-  Object.values(
-    hostState.players
-  ).forEach(
-    player => {
-
-      if (
-        player.isAlive
-      ) {
-
-        net.sendToClient(
-          player.peerId,
-          {
-            type: 'PHASE_CHANGE',
-
-            phase:
-              GAME_PHASES.DAY_VOTE,
-
-            players:
-              getPublicPlayerList()
-          }
-        );
-      }
-    }
-  );
-
-
-  setHostPhase(
-    'DAY VOTE',
-    'Town Vote In Progress'
-  );
-
-
-  renderHostVoteStage();
-
-
-  startTimer(
-    60,
-    resolveTownVote
-  );
-}
-
-
-/* ============================================================
-   VOTE
-============================================================ */
-
-function handleVoteSubmit(
-  peerId,
-  targetId
-) {
-
-  const voter =
-    Object.values(
-      hostState.players
-    ).find(
-      p => p.peerId === peerId
+    alert(
+      error.message ||
+      "Could not create the game."
     );
 
+    net.destroy();
 
-  if (!voter) return;
-
-  if (!voter.isAlive) return;
-
-
-  if (
-    hostState.phase !==
-    GAME_PHASES.DAY_VOTE
-  ) return;
-
-
-  const target =
-    hostState.players[targetId];
-
-
-  if (
-    !target ||
-    !target.isAlive ||
-    target.id === voter.id
-  ) {
-
-    return;
   }
 
-
-  voter.vote =
-    targetId;
-
-
-  audio.playVoteSting();
-
-
-  renderHostVoteStage();
-
-
-  const alive =
-    Object.values(
-      hostState.players
-    )
-    .filter(
-      p => p.isAlive
-    );
-
-
-  const voted =
-    alive.filter(
-      p => p.vote !== null
-    );
-
-
-  if (
-    voted.length >= alive.length
-  ) {
-
-    clearInterval(
-      hostState.timerInterval
-    );
-
-
-    setTimeout(
-      resolveTownVote,
-      800
-    );
-  }
 }
 
 
 /* ============================================================
-   VOTE DISPLAY
+   HOST RECEIVES DATA
 ============================================================ */
 
-function renderHostVoteStage() {
+function handleHostReceivedData(data, conn) {
 
-  const stage =
-    document.getElementById(
-      'host-dynamic-stage'
-    );
+  if (!data || !data.type) return;
 
 
-  const alive =
-    Object.values(
+  if (data.type === "JOIN_REQUEST") {
+
+    if (hostState.phase !== "LOBBY") {
+
+      net.sendTo(data.peerId, {
+
+        type: "JOIN_ERROR",
+
+        message: "The game has already started."
+
+      });
+
+      return;
+
+    }
+
+
+    /*
+      Prevent duplicate player IDs.
+    */
+
+    const alreadyExists = Object.values(
       hostState.players
-    )
-    .filter(
-      p => p.isAlive
+    ).some(
+      player => player.id === data.playerId
     );
 
 
-  const tallies = {};
+    if (alreadyExists) {
 
+      const existingPlayer =
+        Object.values(hostState.players)
+          .find(p => p.id === data.playerId);
 
-  alive.forEach(
-    player => {
+      if (existingPlayer) {
 
-      if (player.vote) {
+        existingPlayer.peerId = data.peerId;
 
-        tallies[player.vote] =
-          (tallies[player.vote] || 0) + 1;
       }
+
+      return;
+
     }
-  );
 
 
-  stage.innerHTML = `
-
-    <div class="space-y-5">
-
-      <div class="flex items-center justify-between
-                  text-xs text-slate-400">
-
-        <span>
-          Live Town Ballots
-        </span>
-
-        <span>
-          ${
-            alive.filter(
-              p => p.vote
-            ).length
-          }
-          /
-          ${alive.length}
-          Voted
-        </span>
-
-      </div>
+    const playerId = data.playerId;
 
 
-      <div class="grid sm:grid-cols-2 gap-3">
+    hostState.players[playerId] = {
 
-        ${
-          alive.map(
-            player => `
+      id: playerId,
 
-            <div class="bg-noir-950 p-4
-                        rounded-xl border
-                        border-slate-800
-                        flex items-center
-                        justify-between">
+      peerId: conn.peer,
 
-              <span class="font-bold">
-                ${escapeHTML(player.name)}
-              </span>
+      name:
+        String(data.name || "Player")
+          .trim()
+          .substring(0, 20),
 
-              <span class="px-3 py-1
-                           bg-crimson-950
-                           text-crimson-400
-                           font-mono font-bold
-                           rounded-lg text-sm">
+      role: null,
 
-                ${tallies[player.id] || 0}
+      alive: true,
 
-              </span>
+      vote: null
 
-            </div>
-
-          `
-          ).join('')
-        }
-
-      </div>
-
-    </div>
-
-  `;
-}
+    };
 
 
-/* ============================================================
-   RESOLVE VOTE
-============================================================ */
-
-function resolveTownVote() {
-
-  clearInterval(
-    hostState.timerInterval
-  );
-
-
-  const alive =
-    Object.values(
-      hostState.players
-    )
-    .filter(
-      p => p.isAlive
+    net.connections.set(
+      conn.peer,
+      conn
     );
 
 
-  const tallies = {};
+    net.sendTo(conn.peer, {
+
+      type: "JOIN_SUCCESS",
+
+      playerId
+
+    });
 
 
-  alive.forEach(
-    player => {
+    renderHostRoster();
 
-      if (player.vote) {
-
-        tallies[player.vote] =
-          (tallies[player.vote] || 0) + 1;
-      }
-    }
-  );
-
-
-  let highest =
-    0;
-
-  let lynchedId =
-    null;
-
-  let tie =
-    false;
-
-
-  Object.entries(
-    tallies
-  ).forEach(
-    ([id, count]) => {
-
-      if (
-        count >
-        highest
-      ) {
-
-        highest =
-          count;
-
-        lynchedId =
-          id;
-
-        tie =
-          false;
-
-      } else if (
-        count === highest &&
-        count > 0
-      ) {
-
-        tie =
-          true;
-      }
-
-    }
-  );
-
-
-  let lynched =
-    null;
-
-
-  if (
-    lynchedId &&
-    !tie
-  ) {
-
-    lynched =
-      hostState.players[
-        lynchedId
-      ];
-
-
-    if (lynched) {
-
-      lynched.isAlive =
-        false;
-    }
   }
 
-
-  renderHostRoster();
-
-
-  document.getElementById(
-    'host-dynamic-stage'
-  ).innerHTML = `
-
-    <div class="glass-panel p-6
-                rounded-2xl
-                border border-slate-800
-                text-center space-y-4">
-
-      <h3 class="text-2xl font-serif font-bold">
-        Vote Concluded
-      </h3>
-
-      ${
-        lynched
-
-        ? `
-
-          <p class="text-lg
-                    text-crimson-400
-                    font-bold">
-
-            ${escapeHTML(lynched.name)}
-            was voted out!
-
-          </p>
-
-          <p class="text-sm text-slate-400">
-
-            Role:
-            <strong class="text-white">
-              ${lynched.role}
-            </strong>
-
-          </p>
-
-        `
-
-        : `
-
-          <p class="text-lg
-                    text-amber-400
-                    font-bold">
-
-            ${
-              highest === 0
-                ? 'Nobody voted.'
-                : 'Tie vote! Nobody was eliminated.'
-            }
-
-          </p>
-
-        `
-      }
-
-    </div>
-
-  `;
-
-
-  net.broadcastToClients({
-
-    type: 'VOTE_RESULT',
-
-    eliminatedId:
-      lynched
-        ? lynched.id
-        : null,
-
-    players:
-      getPublicPlayerList()
-
-  });
-
-
-  if (
-    checkWinConditions()
-  ) return;
-
-
-  setTimeout(
-    startNightPhase,
-    3500
-  );
-}
-
-
-/* ============================================================
-   WIN CONDITIONS
-============================================================ */
-
-function checkWinConditions() {
-
-  const players =
-    Object.values(
-      hostState.players
-    );
-
-
-  const alive =
-    players.filter(
-      p => p.isAlive
-    );
-
-
-  const murderers =
-    alive.filter(
-      p =>
-        p.role ===
-        ROLES.MURDERER
-    );
-
-
-  const nonMurderers =
-    alive.filter(
-      p =>
-        p.role !==
-        ROLES.MURDERER
-    );
-
-
-  if (
-    murderers.length === 0
-  ) {
-
-    triggerGameOver(
-      'INNOCENTS WIN',
-      'All murderers have been eliminated.'
-    );
-
-    return true;
-  }
-
-
-  if (
-    murderers.length >=
-    nonMurderers.length
-  ) {
-
-    triggerGameOver(
-      'MURDERERS WIN',
-      'The murderers have taken control of the town.'
-    );
-
-    return true;
-  }
-
-
-  return false;
-}
-
-
-/* ============================================================
-   GAME OVER
-============================================================ */
-
-function triggerGameOver(
-  title,
-  subtitle
-) {
-
-  hostState.phase =
-    GAME_PHASES.GAME_OVER;
-
-
-  clearInterval(
-    hostState.timerInterval
-  );
-
-
-  const players =
-    Object.values(
-      hostState.players
-    );
-
-
-  net.broadcastToClients({
-
-    type: 'GAME_OVER',
-
-    title,
-
-    subtitle,
-
-    players:
-      players.map(
-        p => ({
-
-          id:
-            p.id,
-
-          name:
-            p.name,
-
-          role:
-            p.role,
-
-          isAlive:
-            p.isAlive
-        })
-      )
-
-  });
-
-
-  document.getElementById(
-    'victory-title'
-  ).textContent =
-    title;
-
-
-  document.getElementById(
-    'victory-subtitle'
-  ).textContent =
-    subtitle;
-
-
-  document.getElementById(
-    'final-roles-list'
-  ).innerHTML =
-    players.map(
-      player => `
-
-        <div class="flex items-center
-                    justify-between p-2
-                    rounded bg-slate-900/80
-                    border border-slate-800">
-
-          <span class="font-bold">
-            ${escapeHTML(player.name)}
-          </span>
-
-          <span class="text-xs font-mono font-bold
-                       ${
-                         player.role === ROLES.MURDERER
-                           ? 'text-crimson-400'
-                           : player.role === ROLES.DETECTIVE
-                           ? 'text-blue-400'
-                           : player.role === ROLES.DOCTOR
-                           ? 'text-emerald-400'
-                           : 'text-slate-400'
-                       }">
-
-            ${player.role}
-
-          </span>
-
-        </div>
-
-      `
-    ).join('');
-
-
-  showView(
-    views.gameOver
-  );
-}
-
-
-/* ============================================================
-   RESTART
-============================================================ */
-
-document
-  .getElementById('btn-restart')
-  .addEventListener(
-    'click',
-    () => {
-
-      net.destroy();
-
-      window.location.href =
-        window.location.pathname;
-    }
-  );
-
-
-/* ============================================================
-   FORCE ADVANCE
-============================================================ */
-
-document
-  .getElementById('btn-host-next-phase')
-  .addEventListener(
-    'click',
-    () => {
-
-      if (
-        hostState.phase ===
-        GAME_PHASES.NIGHT
-      ) {
-
-        resolveNightPhase();
-
-      } else if (
-        hostState.phase ===
-        GAME_PHASES.DAY_VOTE
-      ) {
-
-        resolveTownVote();
-      }
-    }
-  );
-
-
-/* ============================================================
-   TIMER
-============================================================ */
-
-function startTimer(
-  seconds,
-  callback
-) {
-
-  clearInterval(
-    hostState.timerInterval
-  );
-
-
-  hostState.timerSeconds =
-    seconds;
-
-
-  updateTimerDisplay();
-
-
-  hostState.timerInterval =
-    setInterval(
-      () => {
-
-        hostState.timerSeconds--;
-
-        updateTimerDisplay();
-
-
-        if (
-          hostState.timerSeconds <= 0
-        ) {
-
-          clearInterval(
-            hostState.timerInterval
-          );
-
-
-          if (callback) {
-            callback();
-          }
-
-        }
-
-      },
-      1000
-    );
-}
-
-
-function updateTimerDisplay() {
-
-  const minutes =
-    Math.floor(
-      hostState.timerSeconds / 60
-    )
-    .toString()
-    .padStart(2, '0');
-
-
-  const seconds =
-    (
-      hostState.timerSeconds % 60
-    )
-    .toString()
-    .padStart(2, '0');
-
-
-  document.getElementById(
-    'host-timer'
-  ).textContent =
-    `${minutes}:${seconds}`;
 }
 
 
@@ -3795,489 +1241,997 @@ function updateTimerDisplay() {
 function renderHostRoster() {
 
   const roster =
-    document.getElementById(
-      'host-roster-list'
-    );
+    document.getElementById("host-roster");
+
+  const empty =
+    document.getElementById("host-empty");
+
+  const count =
+    document.getElementById("host-player-count");
 
 
   const players =
-    Object.values(
-      hostState.players
-    );
+    Object.values(hostState.players);
 
 
-  const alive =
-    players.filter(
-      p => p.isAlive
-    ).length;
+  count.textContent =
+    `${players.length} player${players.length === 1 ? "" : "s"}`;
 
 
-  roster.innerHTML =
-    players.map(
-      player => `
+  if (players.length === 0) {
 
-        <div class="p-2.5 rounded-xl border
-                    ${
-                      player.isAlive
-                        ? 'bg-noir-950 border-slate-800'
-                        : 'bg-crimson-950/20 border-crimson-900/40 opacity-50'
-                    }
-                    flex items-center justify-between">
+    roster.innerHTML = "";
 
-          <span class="text-sm font-semibold
-                       ${
-                         player.isAlive
-                           ? 'text-slate-200'
-                           : 'text-slate-500 line-through'
-                       }">
+    empty.classList.remove("hidden");
 
-            ${escapeHTML(player.name)}
+    return;
 
-          </span>
+  }
 
-          <span class="text-[10px] font-mono
-                       px-2 py-0.5 rounded
-                       ${
-                         player.isAlive
-                           ? 'bg-emerald-950 text-emerald-400'
-                           : 'bg-slate-800 text-slate-500'
-                       }">
 
-            ${
-              player.isAlive
-                ? 'ALIVE'
-                : 'OUT'
-            }
+  empty.classList.add("hidden");
 
-          </span>
+
+  roster.innerHTML = players.map((player, index) => {
+
+    return `
+      <div class="flex items-center justify-between rounded-2xl bg-black/30 border border-zinc-800 p-4 fade-in">
+
+        <div class="flex items-center gap-4">
+
+          <div class="w-10 h-10 rounded-full bg-red-950/50 flex items-center justify-center font-black text-red-400">
+            ${index + 1}
+          </div>
+
+          <div>
+            <p class="font-bold">
+              ${escapeHTML(player.name)}
+            </p>
+
+            <p class="text-xs text-zinc-600">
+              Connected
+            </p>
+          </div>
 
         </div>
 
-      `
-    ).join('');
+        <i data-lucide="wifi" class="w-4 h-4 text-green-500"></i>
+
+      </div>
+    `;
+
+  }).join("");
 
 
-  document.getElementById(
-    'living-ratio'
-  ).textContent =
-    `${alive}/${players.length} Alive`;
+  lucide.createIcons();
+
 }
 
 
 /* ============================================================
-   PLAYER MESSAGE HANDLER
+   START GAME
 ============================================================ */
 
-function handleClientReceivedData(
-  data
-) {
+function startGame() {
 
-  if (!data) return;
-
-
-  switch (data.type) {
+  const players =
+    Object.values(hostState.players);
 
 
-    case 'JOIN_SUCCESS':
-
-      document.getElementById(
-        'player-status-tag'
-      ).textContent =
-        'Connected';
+  const playerCount =
+    players.length;
 
 
-      document.getElementById(
-        'player-status-tag'
-      ).className =
-        'text-[10px] text-emerald-400 font-semibold uppercase';
+  if (playerCount < 4) {
 
+    alert(
+      "You need at least 4 players to start the game."
+    );
 
-      renderPlayerWaitScreen(
-        'Connected! Waiting for the host to start...'
-      );
-
-      break;
-
-
-    case 'ERROR':
-
-      showToast(
-        data.message || 'Game error.',
-        'error'
-      );
-
-      renderPlayerWaitScreen(
-        data.message || 'Unable to join.'
-      );
-
-      break;
-
-
-    case 'ROLE_ASSIGNMENT':
-
-      localPlayer.role =
-        data.role;
-
-
-      setupPlayerRoleCard(
-        data.role
-      );
-
-
-      break;
-
-
-    case 'PHASE_CHANGE':
-
-      handlePlayerPhaseChange(
-        data
-      );
-
-      break;
-
-
-    case 'INVESTIGATION_RESULT':
-
-      showInvestigationResult(
-        data
-      );
-
-      break;
-
-
-    case 'VOTE_RESULT':
-
-      handlePlayerVoteResult(
-        data
-      );
-
-      break;
-
-
-    case 'GAME_OVER':
-
-      document.getElementById(
-        'victory-title'
-      ).textContent =
-        data.title;
-
-
-      document.getElementById(
-        'victory-subtitle'
-      ).textContent =
-        data.subtitle;
-
-
-      if (data.players) {
-
-        document.getElementById(
-          'final-roles-list'
-        ).innerHTML =
-          data.players.map(
-            player => `
-
-              <div class="flex justify-between
-                          p-2 rounded
-                          bg-slate-900
-                          border border-slate-800">
-
-                <span>
-                  ${escapeHTML(player.name)}
-                </span>
-
-                <span class="font-mono text-xs">
-                  ${player.role}
-                </span>
-
-              </div>
-
-            `
-          ).join('');
-      }
-
-
-      showView(
-        views.gameOver
-      );
-
-      break;
+    return;
 
   }
-}
-
-
-/* ============================================================
-   ROLE CARD
-============================================================ */
-
-function setupPlayerRoleCard(
-  role
-) {
-
-  const title =
-    document.getElementById(
-      'player-role-title'
-    );
-
-
-  const desc =
-    document.getElementById(
-      'player-role-desc'
-    );
-
-
-  title.textContent =
-    role;
-
-
-  if (
-    role === ROLES.MURDERER
-  ) {
-
-    title.className =
-      'text-2xl font-serif font-black uppercase text-crimson-500';
-
-    desc.textContent =
-      'Secretly eliminate players during the Night Phase.';
-
-  } else if (
-    role === ROLES.DETECTIVE
-  ) {
-
-    title.className =
-      'text-2xl font-serif font-black uppercase text-blue-400';
-
-    desc.textContent =
-      'Inspect one player each night.';
-
-  } else if (
-    role === ROLES.DOCTOR
-  ) {
-
-    title.className =
-      'text-2xl font-serif font-black uppercase text-emerald-400';
-
-    desc.textContent =
-      'Protect one player each night.';
-
-  } else {
-
-    title.className =
-      'text-2xl font-serif font-black uppercase text-slate-200';
-
-    desc.textContent =
-      'Survive and vote out the murderers.';
-  }
-
-
-  const box =
-    document.getElementById(
-      'role-reveal-box'
-    );
-
-
-  const hidden =
-    document.getElementById(
-      'role-hidden-content'
-    );
-
-
-  const revealed =
-    document.getElementById(
-      'role-revealed-content'
-    );
 
 
   /*
-    Remove old listeners by replacing the element.
+    Automatically adjust role counts for smaller games.
   */
 
-  const newBox =
-    box.cloneNode(true);
+  let murdererCount = 2;
+
+  if (playerCount <= 5) {
+    murdererCount = 1;
+  }
+
+  if (playerCount >= 8) {
+    murdererCount = 2;
+  }
 
 
-  box.parentNode.replaceChild(
-    newBox,
-    box
-  );
+  hostState.roleCounts = {
+
+    murderer: murdererCount,
+
+    detective: 1,
+
+    doctor: 1
+
+  };
 
 
-  const startReveal =
-    event => {
+  /*
+    Assign roles randomly.
+  */
 
-      if (
-        event.type === 'touchstart'
-      ) {
+  const shuffled =
+    [...players].sort(
+      () => Math.random() - 0.5
+    );
 
-        event.preventDefault();
+
+  let roleIndex = 0;
+
+
+  for (
+    let i = 0;
+    i < hostState.roleCounts.murderer;
+    i++
+  ) {
+
+    shuffled[roleIndex++].role =
+      "murderer";
+
+  }
+
+
+  shuffled[roleIndex++].role =
+    "detective";
+
+
+  shuffled[roleIndex++].role =
+    "doctor";
+
+
+  while (roleIndex < shuffled.length) {
+
+    shuffled[roleIndex++].role =
+      "innocent";
+
+  }
+
+
+  /*
+    Send each player their private role.
+  */
+
+  players.forEach(player => {
+
+    net.sendTo(
+      player.peerId,
+      {
+
+        type: "ROLE_ASSIGNMENT",
+
+        role: player.role,
+
+        description:
+          ROLE_DESCRIPTIONS[player.role]
+
       }
+    );
 
-      hidden.classList.add(
-        'hidden'
-      );
-
-      revealed.classList.remove(
-        'hidden'
-      );
-    };
+  });
 
 
-  const endReveal =
-    () => {
+  hostState.phase = "NIGHT";
 
-      hidden.classList.remove(
-        'hidden'
-      );
+  showView("host-game-view");
 
-      revealed.classList.add(
-        'hidden'
-      );
-    };
+  renderHostGame();
 
+  broadcastPhase();
 
-  newBox.addEventListener(
-    'mousedown',
-    startReveal
-  );
+  startHostTimer(45);
 
-
-  newBox.addEventListener(
-    'mouseup',
-    endReveal
-  );
-
-
-  newBox.addEventListener(
-    'mouseleave',
-    endReveal
-  );
-
-
-  newBox.addEventListener(
-    'touchstart',
-    startReveal,
-    { passive: false }
-  );
-
-
-  newBox.addEventListener(
-    'touchend',
-    endReveal
-  );
-
-
-  newBox.addEventListener(
-    'touchcancel',
-    endReveal
-  );
 }
 
 
 /* ============================================================
-   PLAYER PHASE CHANGE
+   PHASE BROADCAST
 ============================================================ */
 
-function handlePlayerPhaseChange(
-  data
-) {
+function broadcastPhase() {
 
-  const me =
-    data.players.find(
-      p =>
-        p.id ===
-        localPlayer.id
-    );
+  net.broadcast({
 
+    type: "PHASE_CHANGE",
 
-  if (me) {
+    phase: hostState.phase,
 
-    localPlayer.isAlive =
-      me.isAlive;
-  }
+    timerSeconds: hostState.timerSeconds
+
+  });
+
+}
 
 
-  updatePlayerStatus();
+/* ============================================================
+   HOST TIMER
+============================================================ */
+
+function startHostTimer(seconds) {
+
+  clearInterval(hostState.timer);
+
+  hostState.timerSeconds = seconds;
+
+  updateTimers();
 
 
-  if (
-    !localPlayer.isAlive
-  ) {
+  hostState.timer =
+    setInterval(() => {
 
-    renderPlayerDeadScreen();
+      hostState.timerSeconds--;
+
+      updateTimers();
+
+
+      if (hostState.timerSeconds <= 0) {
+
+        clearInterval(hostState.timer);
+
+        hostState.timer = null;
+
+        advancePhase();
+
+      }
+
+    }, 1000);
+
+}
+
+
+/* ============================================================
+   TIMER DISPLAY
+============================================================ */
+
+function updateTimers() {
+
+  const value =
+    hostState.timerSeconds > 0
+      ? formatTime(hostState.timerSeconds)
+      : "--";
+
+
+  document.getElementById(
+    "host-timer"
+  ).textContent = value;
+
+
+  document.getElementById(
+    "player-timer"
+  ).textContent =
+    value;
+
+}
+
+
+function formatTime(seconds) {
+
+  const mins =
+    Math.floor(seconds / 60);
+
+  const secs =
+    seconds % 60;
+
+  return `${mins}:${String(secs).padStart(2, "0")}`;
+
+}
+
+
+/* ============================================================
+   ADVANCE PHASE
+============================================================ */
+
+function advancePhase() {
+
+  clearInterval(hostState.timer);
+
+
+  if (hostState.phase === "NIGHT") {
+
+    resolveNight();
 
     return;
+
   }
 
 
+  if (hostState.phase === "DAY_VOTE") {
+
+    resolveVote();
+
+    return;
+
+  }
+
+}
+
+
+/* ============================================================
+   NIGHT RESOLUTION
+============================================================ */
+
+function resolveNight() {
+
+  let killedPlayerId =
+    hostState.murdererTarget;
+
+
+  const savedPlayerId =
+    hostState.doctorTarget;
+
+
+  let killed = null;
+
+
   if (
-    data.phase ===
-    GAME_PHASES.NIGHT
+    killedPlayerId &&
+    killedPlayerId !== savedPlayerId
   ) {
 
-    localPlayer.hasSubmittedNightAction =
-      false;
+    killed =
+      hostState.players[killedPlayerId];
 
-    renderPlayerNightActions(
-      data.players
+    if (killed) {
+
+      killed.alive = false;
+
+    }
+
+  }
+
+
+  hostState.phase =
+    "DAY_REVEAL";
+
+
+  renderHostGame();
+
+
+  net.broadcast({
+
+    type: "NIGHT_RESULT",
+
+    killedPlayerId:
+      killed ? killed.id : null,
+
+    killedName:
+      killed ? killed.name : null
+
+  });
+
+
+  broadcastPhase();
+
+
+}
+
+
+/* ============================================================
+   OPEN DAY VOTING
+============================================================ */
+
+function openVoting() {
+
+  hostState.phase =
+    "DAY_VOTE";
+
+
+  hostState.votes = {};
+
+
+  Object.values(
+    hostState.players
+  ).forEach(player => {
+
+    player.vote = null;
+
+  });
+
+
+  renderHostGame();
+
+  broadcastPhase();
+
+  startHostTimer(60);
+
+}
+
+
+/* ============================================================
+   VOTE RESOLUTION
+============================================================ */
+
+function resolveVote() {
+
+  const voteCounts = {};
+
+
+  Object.values(
+    hostState.players
+  ).forEach(player => {
+
+    if (
+      player.alive &&
+      player.vote
+    ) {
+
+      voteCounts[player.vote] =
+        (voteCounts[player.vote] || 0) + 1;
+
+    }
+
+  });
+
+
+  let eliminatedId = null;
+
+  let highest = 0;
+
+  let tied = false;
+
+
+  Object.entries(
+    voteCounts
+  ).forEach(([id, votes]) => {
+
+    if (votes > highest) {
+
+      highest = votes;
+
+      eliminatedId = id;
+
+      tied = false;
+
+    } else if (
+      votes === highest &&
+      votes > 0
+    ) {
+
+      tied = true;
+
+    }
+
+  });
+
+
+  if (tied) {
+
+    eliminatedId = null;
+
+  }
+
+
+  let eliminated = null;
+
+
+  if (eliminatedId) {
+
+    eliminated =
+      hostState.players[eliminatedId];
+
+    if (eliminated) {
+
+      eliminated.alive = false;
+
+    }
+
+  }
+
+
+  const winner =
+    checkWinner();
+
+
+  if (winner) {
+
+    endGame(winner);
+
+    return;
+
+  }
+
+
+  hostState.phase =
+    "NIGHT";
+
+
+  hostState.murdererTarget = null;
+
+  hostState.doctorTarget = null;
+
+  hostState.detectiveTarget = null;
+
+
+  Object.values(
+    hostState.players
+  ).forEach(player => {
+
+    player.vote = null;
+
+  });
+
+
+  net.broadcast({
+
+    type: "VOTE_RESULT",
+
+    eliminatedId:
+      eliminated ? eliminated.id : null,
+
+    eliminatedName:
+      eliminated ? eliminated.name : null
+
+  });
+
+
+  renderHostGame();
+
+  broadcastPhase();
+
+  startHostTimer(45);
+
+}
+
+
+/* ============================================================
+   WIN CONDITION
+============================================================ */
+
+function checkWinner() {
+
+  const players =
+    Object.values(hostState.players);
+
+
+  const murderers =
+    players.filter(
+      p =>
+        p.role === "murderer" &&
+        p.alive
+    ).length;
+
+
+  const others =
+    players.filter(
+      p =>
+        p.role !== "murderer" &&
+        p.alive
+    ).length;
+
+
+  if (murderers === 0) {
+
+    return "innocents";
+
+  }
+
+
+  if (murderers >= others) {
+
+    return "murderers";
+
+  }
+
+
+  return null;
+
+}
+
+
+/* ============================================================
+   END GAME
+============================================================ */
+
+function endGame(winner) {
+
+  clearInterval(hostState.timer);
+
+  hostState.winner = winner;
+
+  hostState.phase =
+    "GAME_OVER";
+
+
+  net.broadcast({
+
+    type: "GAME_OVER",
+
+    winner,
+
+    players:
+      Object.values(hostState.players)
+        .map(player => ({
+          name: player.name,
+          role: player.role,
+          alive: player.alive
+        }))
+
+  });
+
+
+  showGameOver(
+    winner,
+    Object.values(hostState.players)
+  );
+
+}
+
+
+/* ============================================================
+   HOST GAME RENDER
+============================================================ */
+
+function renderHostGame() {
+
+  const phase =
+    hostState.phase;
+
+
+  const label =
+    document.getElementById(
+      "host-phase-label"
     );
 
-  } else if (
-    data.phase ===
-    GAME_PHASES.DAY_REVEAL
-  ) {
+  const title =
+    document.getElementById(
+      "host-phase-title"
+    );
 
-    localPlayer.hasVoted =
-      false;
+  const content =
+    document.getElementById(
+      "host-game-content"
+    );
 
-    renderPlayerDayReveal(
+
+  if (phase === "NIGHT") {
+
+    label.textContent = "Night";
+
+    title.textContent =
+      "The Night Begins";
+
+
+    content.innerHTML = `
+      <div class="text-center py-12">
+
+        <i data-lucide="moon" class="w-14 h-14 mx-auto text-red-500 mb-5"></i>
+
+        <h3 class="text-2xl font-bold">
+          Night actions are happening
+        </h3>
+
+        <p class="text-zinc-500 mt-3">
+          Players with special roles are making their choices.
+        </p>
+
+      </div>
+    `;
+
+  }
+
+
+  else if (phase === "DAY_REVEAL") {
+
+    label.textContent = "Day";
+
+    title.textContent =
+      "Morning Has Come";
+
+
+    content.innerHTML = `
+      <div class="text-center py-10">
+
+        <i data-lucide="sunrise" class="w-14 h-14 mx-auto text-yellow-400 mb-5"></i>
+
+        <h3 class="text-2xl font-bold">
+          Reveal the night result
+        </h3>
+
+        <p class="text-zinc-500 mt-3">
+          Read the result to the group, then open voting.
+        </p>
+
+        <button
+          id="btn-open-voting"
+          class="btn mt-7 rounded-xl bg-red-600 hover:bg-red-500 px-7 py-4 font-bold"
+        >
+          Open Voting
+        </button>
+
+      </div>
+    `;
+
+    document.getElementById(
+      "btn-open-voting"
+    ).onclick = openVoting;
+
+  }
+
+
+  else if (phase === "DAY_VOTE") {
+
+    label.textContent = "Day Vote";
+
+    title.textContent =
+      "Who Do You Suspect?";
+
+
+    const players =
+      Object.values(
+        hostState.players
+      );
+
+
+    content.innerHTML = `
+      <div class="text-center mb-6">
+
+        <i data-lucide="vote" class="w-12 h-12 mx-auto text-red-500 mb-4"></i>
+
+        <h3 class="text-2xl font-bold">
+          Voting is open
+        </h3>
+
+        <p class="text-zinc-500 mt-2">
+          Players are voting on their phones.
+        </p>
+
+      </div>
+
+      <div class="space-y-3">
+        ${players.map(player => `
+          <div class="flex items-center justify-between rounded-xl bg-black/30 border border-zinc-800 p-4">
+
+            <span class="${player.alive ? "" : "line-through text-zinc-600"}">
+              ${escapeHTML(player.name)}
+            </span>
+
+            <span class="text-sm text-zinc-500">
+              ${
+                Object.values(hostState.players)
+                  .filter(p => p.vote === player.id)
+                  .length
+              } vote(s)
+            </span>
+
+          </div>
+        `).join("")}
+      </div>
+    `;
+
+  }
+
+
+  lucide.createIcons();
+
+}
+
+
+/* ============================================================
+   PLAYER RECEIVES DATA
+============================================================ */
+
+function handleClientReceivedData(data) {
+
+  if (!data || !data.type) return;
+
+
+  if (data.type === "JOIN_SUCCESS") {
+
+    localPlayer.id =
+      data.playerId;
+
+    showJoinStatus(
+      "Connected! Waiting for the host...",
+      true
+    );
+
+    setTimeout(() => {
+
+      showView("player-view");
+
+    }, 600);
+
+  }
+
+
+  if (data.type === "JOIN_ERROR") {
+
+    showJoinStatus(
+      data.message ||
+      "Unable to join this game.",
+      false
+    );
+
+  }
+
+
+  if (data.type === "ROLE_ASSIGNMENT") {
+
+    localPlayer.role =
+      data.role;
+
+    localPlayer.alive = true;
+
+    localPlayer.hasSubmittedNightAction = false;
+
+    renderPlayerRole();
+
+  }
+
+
+  if (data.type === "PHASE_CHANGE") {
+
+    setPlayerPhase(
+      data.phase
+    );
+
+  }
+
+
+  if (data.type === "NIGHT_RESULT") {
+
+    renderNightResult(
       data
     );
 
-  } else if (
-    data.phase ===
-    GAME_PHASES.DAY_VOTE
-  ) {
+  }
 
-    localPlayer.hasVoted =
-      false;
 
-    renderPlayerVoteActions(
+  if (data.type === "VOTE_RESULT") {
+
+    renderVoteResult(
+      data
+    );
+
+  }
+
+
+  if (data.type === "GAME_OVER") {
+
+    localPlayer.alive =
+      data.players.find(
+        p => p.name === localPlayer.name
+      )?.alive ?? localPlayer.alive;
+
+
+    showGameOver(
+      data.winner,
       data.players
     );
+
   }
+
 }
 
 
 /* ============================================================
-   PLAYER STATUS
+   PLAYER ROLE
 ============================================================ */
 
-function updatePlayerStatus() {
+function renderPlayerRole() {
 
-  const status =
+  const roleName =
     document.getElementById(
-      'player-status-tag'
+      "player-role-name"
+    );
+
+  const description =
+    document.getElementById(
+      "player-role-description"
     );
 
 
-  if (
-    localPlayer.isAlive
-  ) {
+  if (!localPlayer.role) {
 
-    status.textContent =
-      'Alive';
+    roleName.textContent =
+      "Waiting...";
 
-    status.className =
-      'text-[10px] text-emerald-400 font-semibold uppercase';
+    description.textContent =
+      "The host has not started the game yet.";
 
-  } else {
+    return;
 
-    status.textContent =
-      'Out';
-
-    status.className =
-      'text-[10px] text-crimson-500 font-semibold uppercase';
   }
+
+
+  roleName.textContent =
+    capitalize(
+      localPlayer.role
+    );
+
+
+  description.textContent =
+    ROLE_DESCRIPTIONS[
+      localPlayer.role
+    ] || "";
+
+}
+
+
+/* ============================================================
+   PLAYER PHASE
+============================================================ */
+
+function setPlayerPhase(phase) {
+
+  document.getElementById(
+    "player-phase-label"
+  ).textContent =
+    phase.replace("_", " ");
+
+
+  const title =
+    document.getElementById(
+      "player-phase-title"
+    );
+
+
+  if (phase === "NIGHT") {
+
+    title.textContent =
+      "Night";
+
+
+    renderPlayerNight();
+
+  }
+
+
+  else if (phase === "DAY_REVEAL") {
+
+    title.textContent =
+      "Morning";
+
+
+    document.getElementById(
+      "player-content"
+    ).innerHTML = `
+      <div class="text-center py-10">
+
+        <i data-lucide="sunrise" class="w-12 h-12 mx-auto text-yellow-400 mb-4"></i>
+
+        <h3 class="text-2xl font-bold">
+          Waiting for the night result...
+        </h3>
+
+        <p class="text-zinc-500 mt-2">
+          Listen to the host.
+        </p>
+
+      </div>
+    `;
+
+  }
+
+
+  else if (phase === "DAY_VOTE") {
+
+    title.textContent =
+      "Vote";
+
+
+    localPlayer.hasVoted =
+      false;
+
+    renderPlayerVoting();
+
+  }
+
+
+  lucide.createIcons();
+
 }
 
 
@@ -4285,372 +2239,592 @@ function updatePlayerStatus() {
    PLAYER NIGHT
 ============================================================ */
 
-function renderPlayerNightActions(
-  players
-) {
+function renderPlayerNight() {
 
-  const box =
+  const content =
     document.getElementById(
-      'player-action-box'
+      "player-content"
     );
 
 
-  if (
-    localPlayer.role ===
-    ROLES.INNOCENT
-  ) {
+  if (!localPlayer.alive) {
 
-    box.innerHTML = `
+    content.innerHTML = `
+      <div class="text-center py-10">
 
-      <div class="text-center space-y-3 py-5">
+        <i data-lucide="ghost" class="w-12 h-12 mx-auto text-zinc-600 mb-4"></i>
 
-        <i data-lucide="moon"
-           class="w-8 h-8 text-slate-500 mx-auto">
-        </i>
+        <h3 class="text-xl font-bold">
+          You are out of the game
+        </h3>
 
-        <h4 class="font-bold">
-          Close Your Eyes
-        </h4>
-
-        <p class="text-xs text-slate-400">
-          Wait for the host to announce morning.
+        <p class="text-zinc-500 mt-2">
+          Watch the game unfold.
         </p>
 
       </div>
-
     `;
-
 
     lucide.createIcons();
 
     return;
+
   }
-
-
-  let prompt =
-    'Choose a target';
 
 
   if (
-    localPlayer.role ===
-    ROLES.MURDERER
+    localPlayer.role === "murderer"
   ) {
 
-    prompt =
-      'Choose someone to eliminate';
+    renderMurdererAction();
 
-  } else if (
-    localPlayer.role ===
-    ROLES.DOCTOR
-  ) {
-
-    prompt =
-      'Choose someone to protect';
-
-  } else if (
-    localPlayer.role ===
-    ROLES.DETECTIVE
-  ) {
-
-    prompt =
-      'Choose someone to investigate';
   }
 
+  else if (
+    localPlayer.role === "doctor"
+  ) {
 
-  const candidates =
-    players.filter(
-      p =>
-        p.isAlive &&
-        p.id !== localPlayer.id
-    );
+    renderDoctorAction();
 
+  }
 
-  box.innerHTML = `
+  else if (
+    localPlayer.role === "detective"
+  ) {
 
-    <div class="space-y-4">
+    renderDetectiveAction();
 
-      <div class="text-center">
+  }
 
-        <h4 class="font-bold">
-          ${prompt}
-        </h4>
+  else {
 
-        <p class="text-xs text-slate-400 mt-1">
-          Tap a player below.
+    content.innerHTML = `
+      <div class="text-center py-10">
+
+        <i data-lucide="moon" class="w-12 h-12 mx-auto text-zinc-600 mb-4"></i>
+
+        <h3 class="text-xl font-bold">
+          Stay quiet...
+        </h3>
+
+        <p class="text-zinc-500 mt-2">
+          The special roles are making their moves.
         </p>
 
       </div>
+    `;
 
-
-      <div class="space-y-2 max-h-64 overflow-y-auto">
-
-        ${
-          candidates.map(
-            player => `
-
-              <button
-                class="player-target-btn
-                       w-full p-4 rounded-xl
-                       bg-noir-950
-                       border border-slate-800
-                       hover:border-crimson-500
-                       active:bg-crimson-950
-                       text-left font-semibold
-                       transition"
-                data-id="${player.id}"
-              >
-
-                ${escapeHTML(player.name)}
-
-              </button>
-
-            `
-          ).join('')
-        }
-
-      </div>
-
-    </div>
-
-  `;
-
-
-  box
-    .querySelectorAll(
-      '.player-target-btn'
-    )
-    .forEach(
-      button => {
-
-        button.addEventListener(
-          'click',
-          event => {
-
-            if (
-              localPlayer.hasSubmittedNightAction
-            ) return;
-
-
-            localPlayer.hasSubmittedNightAction =
-              true;
-
-
-            const targetId =
-              event.currentTarget.dataset.id;
-
-
-            net.sendToHost({
-
-              type:
-                'NIGHT_ACTION',
-
-              action:
-                localPlayer.role,
-
-              targetId
-            });
-
-
-            renderPlayerWaitScreen(
-              'Action submitted. Waiting for dawn...'
-            );
-
-          }
-        );
-
-      }
-    );
+  }
 
 
   lucide.createIcons();
+
 }
 
 
 /* ============================================================
-   DAY REVEAL
+   NIGHT TARGET UI
 ============================================================ */
 
-function renderPlayerDayReveal(
-  data
-) {
+function alivePlayers(excludeSelf = false) {
 
-  const box =
+  /*
+    We don't receive the complete roster from the host during
+    normal gameplay, so actions are populated when the host
+    sends the current player list.
+
+    This fallback keeps the interface safe.
+  */
+
+  return [];
+
+}
+
+
+/*
+  The host can send current player choices when needed.
+*/
+
+function requestTargets() {
+
+  if (!net.clientConnection) return;
+
+  net.clientConnection.send({
+    type: "REQUEST_PLAYERS"
+  });
+
+}
+
+
+/* ============================================================
+   ACTION HELPERS
+============================================================ */
+
+function sendNightAction(type, targetId) {
+
+  if (
+    !net.clientConnection ||
+    localPlayer.hasSubmittedNightAction
+  ) {
+    return;
+  }
+
+
+  localPlayer.hasSubmittedNightAction =
+    true;
+
+
+  net.clientConnection.send({
+
+    type: "NIGHT_ACTION",
+
+    action: type,
+
+    targetId
+
+  });
+
+
+  document.getElementById(
+    "player-content"
+  ).innerHTML = `
+    <div class="text-center py-10">
+
+      <i data-lucide="check-circle" class="w-12 h-12 mx-auto text-green-500 mb-4"></i>
+
+      <h3 class="text-xl font-bold">
+        Action submitted
+      </h3>
+
+      <p class="text-zinc-500 mt-2">
+        Waiting for the other players...
+      </p>
+
+    </div>
+  `;
+
+  lucide.createIcons();
+
+}
+
+
+/* ============================================================
+   MURDERER
+============================================================ */
+
+function renderMurdererAction() {
+
+  const content =
     document.getElementById(
-      'player-action-box'
+      "player-content"
+    );
+
+
+  content.innerHTML = `
+    <div class="text-center">
+
+      <i data-lucide="skull" class="w-12 h-12 mx-auto text-red-500 mb-4"></i>
+
+      <h3 class="text-2xl font-bold">
+        Choose your target
+      </h3>
+
+      <p class="text-zinc-500 mt-2">
+        Select a player to eliminate.
+      </p>
+
+      <div
+        id="night-target-list"
+        class="grid gap-3 mt-6"
+      >
+        <button
+          onclick="requestTargets()"
+          class="rounded-xl bg-zinc-800 hover:bg-zinc-700 py-4 font-semibold"
+        >
+          Load Players
+        </button>
+      </div>
+
+    </div>
+  `;
+
+}
+
+
+/* ============================================================
+   DOCTOR
+============================================================ */
+
+function renderDoctorAction() {
+
+  const content =
+    document.getElementById(
+      "player-content"
+    );
+
+
+  content.innerHTML = `
+    <div class="text-center">
+
+      <i data-lucide="heart-pulse" class="w-12 h-12 mx-auto text-green-500 mb-4"></i>
+
+      <h3 class="text-2xl font-bold">
+        Choose someone to protect
+      </h3>
+
+      <p class="text-zinc-500 mt-2">
+        Your protection can prevent a night elimination.
+      </p>
+
+      <div
+        id="night-target-list"
+        class="grid gap-3 mt-6"
+      >
+        <button
+          onclick="requestTargets()"
+          class="rounded-xl bg-zinc-800 hover:bg-zinc-700 py-4 font-semibold"
+        >
+          Load Players
+        </button>
+      </div>
+
+    </div>
+  `;
+
+}
+
+
+/* ============================================================
+   DETECTIVE
+============================================================ */
+
+function renderDetectiveAction() {
+
+  const content =
+    document.getElementById(
+      "player-content"
+    );
+
+
+  content.innerHTML = `
+    <div class="text-center">
+
+      <i data-lucide="search" class="w-12 h-12 mx-auto text-blue-400 mb-4"></i>
+
+      <h3 class="text-2xl font-bold">
+        Investigate a player
+      </h3>
+
+      <p class="text-zinc-500 mt-2">
+        Discover whether they are a murderer.
+      </p>
+
+      <div
+        id="night-target-list"
+        class="grid gap-3 mt-6"
+      >
+        <button
+          onclick="requestTargets()"
+          class="rounded-xl bg-zinc-800 hover:bg-zinc-700 py-4 font-semibold"
+        >
+          Load Players
+        </button>
+      </div>
+
+    </div>
+  `;
+
+}
+
+
+/* ============================================================
+   PLAYER VOTING
+============================================================ */
+
+function renderPlayerVoting() {
+
+  const content =
+    document.getElementById(
+      "player-content"
+    );
+
+
+  if (!localPlayer.alive) {
+
+    content.innerHTML = `
+      <div class="text-center py-10">
+
+        <i data-lucide="ghost" class="w-12 h-12 mx-auto text-zinc-600 mb-4"></i>
+
+        <h3 class="text-xl font-bold">
+          You cannot vote
+        </h3>
+
+      </div>
+    `;
+
+    lucide.createIcons();
+
+    return;
+
+  }
+
+
+  content.innerHTML = `
+    <div class="text-center py-8">
+
+      <i data-lucide="vote" class="w-12 h-12 mx-auto text-red-500 mb-4"></i>
+
+      <h3 class="text-2xl font-bold">
+        Voting is open
+      </h3>
+
+      <p class="text-zinc-500 mt-2">
+        Choose who you suspect.
+      </p>
+
+      <button
+        onclick="requestTargets()"
+        class="btn mt-6 rounded-xl bg-red-600 hover:bg-red-500 px-6 py-4 font-bold"
+      >
+        Load Players
+      </button>
+
+      <div
+        id="vote-target-list"
+        class="grid gap-3 mt-5"
+      ></div>
+
+    </div>
+  `;
+
+  lucide.createIcons();
+
+}
+
+
+/* ============================================================
+   HOST PLAYER LIST RESPONSE
+============================================================ */
+
+function sendCurrentPlayers(conn) {
+
+  const players =
+    Object.values(
+      hostState.players
+    ).map(player => ({
+
+      id: player.id,
+
+      name: player.name,
+
+      alive: player.alive
+
+    }));
+
+
+  conn.send({
+
+    type: "PLAYER_LIST",
+
+    players
+
+  });
+
+}
+
+
+/* ============================================================
+   CLIENT PLAYER LIST
+============================================================ */
+
+function renderTargetButtons(players) {
+
+  const nightList =
+    document.getElementById(
+      "night-target-list"
+    );
+
+
+  const voteList =
+    document.getElementById(
+      "vote-target-list"
+    );
+
+
+  if (nightList) {
+
+    const available =
+      players.filter(
+        player =>
+          player.alive &&
+          player.id !== localPlayer.id
+      );
+
+
+    nightList.innerHTML =
+      available.map(player => {
+
+        return `
+          <button
+            class="btn rounded-xl bg-zinc-800 hover:bg-red-900/50 border border-zinc-800 hover:border-red-700 p-4 text-left font-bold"
+            onclick="chooseNightTarget('${escapeAttribute(player.id)}')"
+          >
+            ${escapeHTML(player.name)}
+          </button>
+        `;
+
+      }).join("");
+
+  }
+
+
+  if (voteList) {
+
+    const available =
+      players.filter(
+        player =>
+          player.alive &&
+          player.id !== localPlayer.id
+      );
+
+
+    voteList.innerHTML =
+      available.map(player => {
+
+        return `
+          <button
+            class="btn rounded-xl bg-zinc-800 hover:bg-red-900/50 border border-zinc-800 hover:border-red-700 p-4 text-left font-bold"
+            onclick="castVote('${escapeAttribute(player.id)}')"
+          >
+            ${escapeHTML(player.name)}
+          </button>
+        `;
+
+      }).join("");
+
+  }
+
+}
+
+
+/* ============================================================
+   CHOOSE NIGHT TARGET
+============================================================ */
+
+function chooseNightTarget(targetId) {
+
+  let action = "murder";
+
+  if (localPlayer.role === "doctor") {
+    action = "protect";
+  }
+
+  if (localPlayer.role === "detective") {
+    action = "investigate";
+  }
+
+  sendNightAction(
+    action,
+    targetId
+  );
+
+}
+
+
+/* ============================================================
+   CAST VOTE
+============================================================ */
+
+function castVote(targetId) {
+
+  if (
+    localPlayer.hasVoted ||
+    !net.clientConnection
+  ) {
+    return;
+  }
+
+
+  localPlayer.hasVoted = true;
+
+
+  net.clientConnection.send({
+
+    type: "VOTE",
+
+    targetId
+
+  });
+
+
+  document.getElementById(
+    "player-content"
+  ).innerHTML = `
+    <div class="text-center py-10">
+
+      <i data-lucide="check-circle" class="w-12 h-12 mx-auto text-green-500 mb-4"></i>
+
+      <h3 class="text-xl font-bold">
+        Vote submitted
+      </h3>
+
+      <p class="text-zinc-500 mt-2">
+        Waiting for the results...
+      </p>
+
+    </div>
+  `;
+
+
+  lucide.createIcons();
+
+}
+
+
+/* ============================================================
+   NIGHT RESULT
+============================================================ */
+
+function renderNightResult(data) {
+
+  const content =
+    document.getElementById(
+      "player-content"
     );
 
 
   let message =
-    'Look at the host screen for the night outcome.';
+    "Everyone survived the night.";
 
 
-  if (
-    data.lastKilledName
-  ) {
+  if (data.killedName) {
 
     message =
-      `${data.lastKilledName} was eliminated during the night.`;
+      `${data.killedName} did not survive the night.`;
 
-  } else if (
-    data.savedByDoctor
-  ) {
-
-    message =
-      'The Doctor successfully protected the target. Nobody was eliminated.';
   }
 
 
-  box.innerHTML = `
+  content.innerHTML = `
+    <div class="text-center py-10">
 
-    <div class="text-center space-y-4 py-5">
+      <i data-lucide="sunrise" class="w-12 h-12 mx-auto text-yellow-400 mb-4"></i>
 
-      <i data-lucide="sun"
-         class="w-10 h-10 text-amber-400 mx-auto">
-      </i>
+      <h3 class="text-2xl font-bold">
+        Morning has arrived
+      </h3>
 
-      <h4 class="font-bold text-white">
-        Day Phase
-      </h4>
-
-      <p class="text-sm text-slate-300">
+      <p class="text-zinc-400 mt-3">
         ${escapeHTML(message)}
       </p>
 
-      <p class="text-xs text-slate-500">
-        Discuss with the group, then wait for voting.
-      </p>
-
     </div>
-
   `;
 
 
   lucide.createIcons();
-}
 
-
-/* ============================================================
-   PLAYER VOTE
-============================================================ */
-
-function renderPlayerVoteActions(
-  players
-) {
-
-  const box =
-    document.getElementById(
-      'player-action-box'
-    );
-
-
-  const candidates =
-    players.filter(
-      p =>
-        p.isAlive &&
-        p.id !== localPlayer.id
-    );
-
-
-  box.innerHTML = `
-
-    <div class="space-y-4">
-
-      <div class="text-center">
-
-        <i data-lucide="vote"
-           class="w-8 h-8 text-indigo-400 mx-auto mb-2">
-        </i>
-
-        <h4 class="font-bold">
-          Cast Your Vote
-        </h4>
-
-        <p class="text-xs text-slate-400 mt-1">
-          Who do you suspect?
-        </p>
-
-      </div>
-
-
-      <div class="space-y-2 max-h-64 overflow-y-auto">
-
-        ${
-          candidates.map(
-            player => `
-
-              <button
-                class="player-vote-btn
-                       w-full p-4 rounded-xl
-                       bg-noir-950
-                       border border-slate-800
-                       hover:border-indigo-500
-                       active:bg-indigo-950
-                       text-left font-semibold
-                       transition"
-                data-id="${player.id}"
-              >
-
-                ${escapeHTML(player.name)}
-
-              </button>
-
-            `
-          ).join('')
-        }
-
-      </div>
-
-    </div>
-
-  `;
-
-
-  box
-    .querySelectorAll(
-      '.player-vote-btn'
-    )
-    .forEach(
-      button => {
-
-        button.addEventListener(
-          'click',
-          event => {
-
-            if (
-              localPlayer.hasVoted
-            ) return;
-
-
-            localPlayer.hasVoted =
-              true;
-
-
-            const targetId =
-              event.currentTarget.dataset.id;
-
-
-            net.sendToHost({
-
-              type:
-                'CAST_VOTE',
-
-              targetId
-
-            });
-
-
-            renderPlayerWaitScreen(
-              'Vote submitted. Waiting for the town...'
-            );
-
-          }
-        );
-
-      }
-    );
-
-
-  lucide.createIcons();
 }
 
 
@@ -4658,159 +2832,661 @@ function renderPlayerVoteActions(
    VOTE RESULT
 ============================================================ */
 
-function handlePlayerVoteResult(
-  data
-) {
+function renderVoteResult(data) {
 
-  if (
-    data.eliminatedId ===
-    localPlayer.id
-  ) {
-
-    localPlayer.isAlive =
-      false;
-
-
-    updatePlayerStatus();
-
-
-    renderPlayerDeadScreen();
-
-  } else {
-
-    renderPlayerWaitScreen(
-      'Vote concluded. Waiting for the next night...'
+  const content =
+    document.getElementById(
+      "player-content"
     );
+
+
+  let message =
+    "The vote ended in a tie. Nobody was eliminated.";
+
+
+  if (data.eliminatedName) {
+
+    message =
+      `${data.eliminatedName} was eliminated by the vote.`;
+
   }
-}
 
 
-/* ============================================================
-   INVESTIGATION
-============================================================ */
+  content.innerHTML = `
+    <div class="text-center py-10">
 
-function showInvestigationResult(
-  data
-) {
+      <i data-lucide="gavel" class="w-12 h-12 mx-auto text-red-500 mb-4"></i>
 
-  const result =
-    data.isMurderer
-      ? `${data.targetName} IS A MURDERER`
-      : `${data.targetName} is NOT a murderer`;
+      <h3 class="text-2xl font-bold">
+        Vote Result
+      </h3>
 
-
-  showToast(
-    result
-  );
-
-
-  const box =
-    document.getElementById(
-      'player-action-box'
-    );
-
-
-  box.innerHTML = `
-
-    <div class="text-center space-y-4 py-6">
-
-      <i data-lucide="search-check"
-         class="w-10 h-10 text-blue-400 mx-auto">
-      </i>
-
-      <h4 class="font-bold text-blue-400">
-        Investigation Result
-      </h4>
-
-      <p class="text-sm text-white">
-        ${escapeHTML(result)}
-      </p>
-
-      <p class="text-xs text-slate-500">
-        The result is visible only to you.
-      </p>
-
-    </div>
-
-  `;
-
-
-  lucide.createIcons();
-}
-
-
-/* ============================================================
-   WAIT SCREEN
-============================================================ */
-
-function renderPlayerWaitScreen(
-  message
-) {
-
-  const box =
-    document.getElementById(
-      'player-action-box'
-    );
-
-
-  box.innerHTML = `
-
-    <div class="text-center space-y-4 py-7">
-
-      <i data-lucide="loader"
-         class="w-8 h-8 text-crimson-500
-                animate-spin mx-auto">
-      </i>
-
-      <p class="text-sm font-semibold text-slate-300">
+      <p class="text-zinc-400 mt-3">
         ${escapeHTML(message)}
       </p>
 
     </div>
-
   `;
 
 
   lucide.createIcons();
+
 }
 
 
 /* ============================================================
-   DEAD SCREEN
+   GAME OVER
 ============================================================ */
 
-function renderPlayerDeadScreen() {
+function showGameOver(winner, players) {
 
-  const box =
-    document.getElementById(
-      'player-action-box'
-    );
+  showView("game-over-view");
 
 
-  box.innerHTML = `
+  document.getElementById(
+    "winner-title"
+  ).textContent =
+    winner === "murderers"
+      ? "Murderers Win"
+      : "Innocents Win";
 
-    <div class="text-center space-y-4 py-7">
 
-      <i data-lucide="ghost"
-         class="w-10 h-10 text-slate-600 mx-auto">
-      </i>
+  document.getElementById(
+    "winner-description"
+  ).textContent =
+    winner === "murderers"
+      ? "The murderers have taken control of the game."
+      : "The innocent team successfully stopped the murderers.";
 
-      <h4 class="font-serif text-xl font-bold text-slate-400">
-        You Are Out
-      </h4>
 
-      <p class="text-xs text-slate-500">
-        You can watch the rest of the game,
-        but you cannot vote or perform actions.
-      </p>
+  document.getElementById(
+    "final-roles"
+  ).innerHTML = `
+    <h3 class="text-xl font-bold mb-4">
+      Final Roles
+    </h3>
+
+    <div class="space-y-2">
+
+      ${players.map(player => `
+
+        <div class="flex items-center justify-between rounded-xl bg-black/30 border border-zinc-800 p-4">
+
+          <span class="${player.alive ? "" : "text-zinc-600 line-through"}">
+            ${escapeHTML(player.name)}
+          </span>
+
+          <span class="text-sm font-bold text-red-400">
+            ${capitalize(player.role)}
+          </span>
+
+        </div>
+
+      `).join("")}
 
     </div>
-
   `;
 
 
   lucide.createIcons();
+
 }
+
+
+/* ============================================================
+   COPY JOIN LINK
+============================================================ */
+
+async function copyJoinLink() {
+
+  const url =
+    getJoinURL(
+      hostState.roomCode
+    );
+
+
+  try {
+
+    await navigator.clipboard.writeText(url);
+
+  } catch {
+
+    /*
+      Fallback for browsers where Clipboard API isn't available.
+    */
+
+    const textarea =
+      document.createElement("textarea");
+
+    textarea.value = url;
+
+    document.body.appendChild(textarea);
+
+    textarea.select();
+
+    document.execCommand("copy");
+
+    textarea.remove();
+
+  }
+
+
+  const status =
+    document.getElementById(
+      "copy-status"
+    );
+
+
+  status.classList.remove(
+    "hidden"
+  );
+
+
+  setTimeout(() => {
+
+    status.classList.add(
+      "hidden"
+    );
+
+  }, 2000);
+
+}
+
+
+/* ============================================================
+   JOIN GAME
+============================================================ */
+
+async function joinGame(event) {
+
+  event.preventDefault();
+
+
+  const roomCode =
+    document.getElementById(
+      "join-code"
+    ).value
+      .trim()
+      .toUpperCase();
+
+
+  const name =
+    document.getElementById(
+      "join-name"
+    ).value
+      .trim();
+
+
+  if (
+    roomCode.length !== 4 ||
+    !name
+  ) {
+
+    showJoinStatus(
+      "Enter a valid 4-character room code and your name.",
+      false
+    );
+
+    return;
+
+  }
+
+
+  const button =
+    document.querySelector(
+      "#join-form button[type='submit']"
+    );
+
+
+  button.disabled = true;
+
+  button.textContent =
+    "Connecting...";
+
+
+  showJoinStatus(
+    "Connecting to the host...",
+    true
+  );
+
+
+  localPlayer = {
+
+    id: getPersistentPlayerId(),
+
+    peerId: "",
+
+    name,
+
+    role: null,
+
+    alive: true,
+
+    hasSubmittedNightAction: false,
+
+    hasVoted: false
+
+  };
+
+
+  try {
+
+    const connection =
+      await net.initClient(
+        roomCode,
+        localPlayer.id,
+        localPlayer.name,
+        handleClientReceivedData
+      );
+
+
+    localPlayer.peerId =
+      net.peer.id;
+
+
+    console.log(
+      "Successfully connected to room:",
+      roomCode
+    );
+
+
+    /*
+      Ask the host for the current player list.
+    */
+
+    connection.send({
+      type: "REQUEST_PLAYERS"
+    });
+
+
+  } catch (error) {
+
+    console.error(error);
+
+    showJoinStatus(
+      error.message ||
+      "Unable to connect to the game.",
+      false
+    );
+
+    button.disabled = false;
+
+    button.textContent =
+      "Join Game";
+
+  }
+
+}
+
+
+/* ============================================================
+   HANDLE CLIENT REQUESTS ON HOST
+============================================================ */
+
+const originalHostHandler =
+  handleHostReceivedData;
+
+
+handleHostReceivedData =
+  function(data, conn) {
+
+    if (
+      data?.type === "REQUEST_PLAYERS"
+    ) {
+
+      sendCurrentPlayers(conn);
+
+      return;
+
+    }
+
+
+    if (
+      data?.type === "NIGHT_ACTION"
+    ) {
+
+      if (
+        data.action === "murder"
+      ) {
+
+        hostState.murdererTarget =
+          data.targetId;
+
+      }
+
+
+      if (
+        data.action === "protect"
+      ) {
+
+        hostState.doctorTarget =
+          data.targetId;
+
+      }
+
+
+      if (
+        data.action === "investigate"
+      ) {
+
+        hostState.detectiveTarget =
+          data.targetId;
+
+
+        const target =
+          hostState.players[
+            data.targetId
+          ];
+
+
+        if (target) {
+
+          net.sendTo(
+            conn.peer,
+            {
+
+              type: "INVESTIGATION_RESULT",
+
+              targetName:
+                target.name,
+
+              isMurderer:
+                target.role === "murderer"
+
+            }
+          );
+
+        }
+
+      }
+
+
+      return;
+
+    }
+
+
+    if (
+      data?.type === "VOTE"
+    ) {
+
+      const player =
+        Object.values(
+          hostState.players
+        ).find(
+          p => p.peerId === conn.peer
+        );
+
+
+      if (player && player.alive) {
+
+        player.vote =
+          data.targetId;
+
+      }
+
+
+      return;
+
+    }
+
+
+    originalHostHandler(
+      data,
+      conn
+    );
+
+  };
+
+
+/* ============================================================
+   INVESTIGATION RESULT
+============================================================ */
+
+function handleInvestigationResult(data) {
+
+  const content =
+    document.getElementById(
+      "player-content"
+    );
+
+
+  content.innerHTML = `
+    <div class="text-center py-10">
+
+      <i data-lucide="search-check" class="w-12 h-12 mx-auto text-blue-400 mb-4"></i>
+
+      <h3 class="text-2xl font-bold">
+        Investigation Complete
+      </h3>
+
+      <p class="text-zinc-400 mt-3">
+        ${escapeHTML(data.targetName)}
+        is
+        <strong class="${data.isMurderer ? "text-red-500" : "text-green-500"}">
+          ${data.isMurderer ? "a MURDERER" : "NOT a murderer"}
+        </strong>.
+      </p>
+
+    </div>
+  `;
+
+
+  lucide.createIcons();
+
+}
+
+
+/* ============================================================
+   ESCAPING
+============================================================ */
+
+function escapeHTML(value) {
+
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+
+}
+
+
+function escapeAttribute(value) {
+
+  return String(value)
+    .replaceAll("\\", "\\\\")
+    .replaceAll("'", "\\'");
+
+}
+
+
+function capitalize(value) {
+
+  if (!value) return "";
+
+  return value.charAt(0).toUpperCase()
+    + value.slice(1);
+
+}
+
+
+/* ============================================================
+   BUTTON EVENTS
+============================================================ */
+
+document.getElementById(
+  "btn-create"
+).addEventListener(
+  "click",
+  createGame
+);
+
+
+document.getElementById(
+  "btn-show-join"
+).addEventListener(
+  "click",
+  () => {
+
+    showView("join-view");
+
+    document.getElementById(
+      "join-code"
+    ).focus();
+
+  }
+);
+
+
+document.getElementById(
+  "btn-back-landing"
+).addEventListener(
+  "click",
+  () => {
+
+    net.destroy();
+
+    showView("landing-view");
+
+  }
+);
+
+
+document.getElementById(
+  "join-form"
+).addEventListener(
+  "submit",
+  joinGame
+);
+
+
+document.getElementById(
+  "btn-host-start"
+).addEventListener(
+  "click",
+  startGame
+);
+
+
+document.getElementById(
+  "btn-host-next-phase"
+).addEventListener(
+  "click",
+  advancePhase
+);
+
+
+document.getElementById(
+  "btn-copy-link"
+).addEventListener(
+  "click",
+  copyJoinLink
+);
+
+
+document.getElementById(
+  "btn-restart"
+).addEventListener(
+  "click",
+  () => {
+
+    net.destroy();
+
+    /*
+      Full reload clears all game state and returns to the
+      GitHub Pages landing page.
+    */
+
+    window.location.href =
+      window.location.origin +
+      window.location.pathname;
+
+  }
+);
+
+
+/* ============================================================
+   QR AUTO-JOIN
+============================================================ */
+
+function checkRoomFromURL() {
+
+  const params =
+    new URLSearchParams(
+      window.location.search
+    );
+
+
+  const room =
+    params.get("room");
+
+
+  if (!room) {
+
+    showView("landing-view");
+
+    return;
+
+  }
+
+
+  const cleanRoom =
+    room
+      .trim()
+      .toUpperCase();
+
+
+  if (cleanRoom.length !== 4) {
+
+    showView("landing-view");
+
+    return;
+
+  }
+
+
+  /*
+    Someone scanned the QR code.
+
+    Automatically take them to the Join screen.
+  */
+
+  document.getElementById(
+    "join-code"
+  ).value =
+    cleanRoom;
+
+
+  showView("join-view");
+
+
+  setTimeout(() => {
+
+    document.getElementById(
+      "join-name"
+    ).focus();
+
+  }, 100);
+
+}
+
+
+/* ============================================================
+   INITIALIZE
+============================================================ */
+
+document.addEventListener(
+  "DOMContentLoaded",
+  () => {
+
+    lucide.createIcons();
+
+    checkRoomFromURL();
+
+  }
+);
 
 </script>
 
