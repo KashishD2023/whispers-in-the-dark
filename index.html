@@ -1,0 +1,4818 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+
+  <title>Whispers in the Dark</title>
+
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- PeerJS -->
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+
+  <!-- QRCode -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+  <!-- Lucide -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            crimson: {
+              400: '#ff4d4d',
+              500: '#e60000',
+              600: '#cc0000',
+              700: '#990000',
+              800: '#660000',
+              900: '#330000',
+              950: '#1a0000'
+            },
+            noir: {
+              800: '#18181b',
+              900: '#0f0f12',
+              950: '#08080a'
+            }
+          },
+          fontFamily: {
+            serif: ['Georgia', 'Cambria', 'serif'],
+            sans: ['Inter', 'Arial', 'sans-serif']
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #08080a;
+      color: #f3f4f6;
+      font-family: Arial, sans-serif;
+      overflow-x: hidden;
+    }
+
+    .glass-panel {
+      background: rgba(24, 24, 27, 0.88);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255,255,255,.08);
+      box-shadow: 0 8px 32px rgba(0,0,0,.6);
+    }
+
+    .glass-panel-red {
+      background: rgba(51,0,0,.48);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(230,0,0,.3);
+      box-shadow: 0 8px 32px rgba(153,0,0,.4);
+    }
+
+    .blood-glow {
+      box-shadow: 0 0 25px rgba(230,0,0,.5);
+    }
+
+    .pulse-glow {
+      animation: pulse-red 2.5s infinite alternate;
+    }
+
+    @keyframes pulse-red {
+      from {
+        box-shadow: 0 0 10px rgba(230,0,0,.2);
+      }
+      to {
+        box-shadow: 0 0 35px rgba(230,0,0,.7);
+      }
+    }
+
+    button {
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .role-card-cover {
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+    }
+
+    #qrcode img,
+    #qrcode canvas {
+      margin: auto;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+
+<body class="min-h-screen flex flex-col selection:bg-crimson-600 selection:text-white">
+
+  <!-- Sound -->
+  <div class="fixed top-4 right-4 z-50">
+    <button
+      id="sound-toggle-btn"
+      class="glass-panel p-2.5 rounded-full hover:bg-slate-800 transition text-slate-400 hover:text-white"
+      title="Toggle Sound"
+    >
+      <i data-lucide="volume-2" id="sound-icon" class="w-5 h-5"></i>
+    </button>
+  </div>
+
+  <!-- Toasts -->
+  <div
+    id="toast-container"
+    class="fixed top-4 left-1/2 -translate-x-1/2 z-[100] flex flex-col items-center gap-2 pointer-events-none w-full max-w-sm px-4"
+  ></div>
+
+  <main class="flex-grow flex items-center justify-center p-4 md:p-6 relative">
+
+    <div class="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2
+                w-96 h-96 bg-crimson-900/20 rounded-full blur-[120px] pointer-events-none">
+    </div>
+
+    <!-- ========================================================= -->
+    <!-- LANDING -->
+    <!-- ========================================================= -->
+
+    <section id="view-landing" class="w-full max-w-md mx-auto text-center space-y-8 z-10">
+
+      <div class="space-y-3">
+
+        <div class="inline-flex items-center justify-center p-4 rounded-full
+                    bg-crimson-950/80 border border-crimson-700/50 mb-2 blood-glow">
+
+          <i data-lucide="skull" class="w-12 h-12 text-crimson-500"></i>
+
+        </div>
+
+        <h1 class="text-4xl md:text-5xl font-serif tracking-wider text-white uppercase font-black">
+          Whispers
+          <span class="text-crimson-500">In The</span>
+          Dark
+        </h1>
+
+        <p class="text-slate-400 text-sm md:text-base">
+          Real-time multi-device murder mystery game.
+        </p>
+
+      </div>
+
+      <div class="grid gap-4 pt-4">
+
+        <button
+          id="btn-choice-host"
+          class="glass-panel-red hover:bg-crimson-900/40 p-6 rounded-2xl
+                 flex items-center justify-between group transition-all text-left"
+        >
+          <div>
+            <div class="text-xl font-bold flex items-center gap-2">
+              <i data-lucide="tv" class="w-5 h-5 text-crimson-400"></i>
+              Create New Room
+            </div>
+
+            <div class="text-xs text-slate-400 mt-1">
+              Host the game and display the QR code.
+            </div>
+          </div>
+
+          <i data-lucide="chevron-right"
+             class="w-6 h-6 text-slate-500 group-hover:text-crimson-400 transition">
+          </i>
+        </button>
+
+        <button
+          id="btn-choice-join"
+          class="glass-panel hover:bg-slate-800/60 p-6 rounded-2xl
+                 flex items-center justify-between group transition-all text-left"
+        >
+          <div>
+            <div class="text-xl font-bold flex items-center gap-2">
+              <i data-lucide="smartphone" class="w-5 h-5 text-indigo-400"></i>
+              Join Game
+            </div>
+
+            <div class="text-xs text-slate-400 mt-1">
+              Enter a room code and your name.
+            </div>
+          </div>
+
+          <i data-lucide="chevron-right"
+             class="w-6 h-6 text-slate-500 group-hover:text-indigo-400 transition">
+          </i>
+        </button>
+
+      </div>
+    </section>
+
+
+    <!-- ========================================================= -->
+    <!-- JOIN -->
+    <!-- ========================================================= -->
+
+    <section id="view-join" class="w-full max-w-md mx-auto hidden z-10">
+
+      <div class="glass-panel p-6 md:p-8 rounded-3xl space-y-6">
+
+        <button
+          class="btn-back text-slate-400 hover:text-white flex items-center gap-1 text-sm"
+        >
+          <i data-lucide="arrow-left" class="w-4 h-4"></i>
+          Back
+        </button>
+
+        <div class="text-center">
+
+          <h2 class="text-2xl font-serif font-bold">
+            Join the Lobby
+          </h2>
+
+          <p class="text-xs text-slate-400 mt-1">
+            Enter the room code and your player name.
+          </p>
+
+        </div>
+
+        <form id="form-join" class="space-y-4">
+
+          <div>
+
+            <label class="block text-xs uppercase font-semibold text-slate-400 mb-1">
+              Room Code
+            </label>
+
+            <input
+              type="text"
+              id="input-room-code"
+              maxlength="4"
+              placeholder="ABCD"
+              required
+              autocomplete="off"
+              class="w-full bg-noir-950 border border-slate-700 rounded-xl
+                     px-4 py-3 font-mono text-2xl tracking-widest text-center
+                     uppercase text-crimson-400 focus:outline-none focus:border-crimson-500"
+            >
+
+          </div>
+
+          <div>
+
+            <label class="block text-xs uppercase font-semibold text-slate-400 mb-1">
+              Your Name
+            </label>
+
+            <input
+              type="text"
+              id="input-player-name"
+              maxlength="14"
+              placeholder="Detective Miller"
+              required
+              autocomplete="off"
+              class="w-full bg-noir-950 border border-slate-700 rounded-xl
+                     px-4 py-3 text-lg text-white focus:outline-none focus:border-indigo-500"
+            >
+
+          </div>
+
+          <button
+            type="submit"
+            id="btn-submit-join"
+            class="w-full py-4 bg-crimson-600 hover:bg-crimson-500
+                   font-bold rounded-xl text-white transition flex items-center
+                   justify-center gap-2"
+          >
+            <span>Enter Game Room</span>
+            <i data-lucide="log-in" class="w-5 h-5"></i>
+          </button>
+
+        </form>
+
+      </div>
+    </section>
+
+
+    <!-- ========================================================= -->
+    <!-- HOST LOBBY -->
+    <!-- ========================================================= -->
+
+    <section id="view-host-lobby"
+             class="w-full max-w-5xl mx-auto hidden z-10 space-y-6">
+
+      <div class="glass-panel p-6 rounded-3xl flex flex-col md:flex-row
+                  items-center justify-between gap-6">
+
+        <div class="space-y-2 text-center md:text-left">
+
+          <span class="px-3 py-1 bg-crimson-950 border border-crimson-700
+                       text-crimson-400 text-xs font-bold rounded-full uppercase">
+            Host Command Center
+          </span>
+
+          <h2 class="text-3xl font-serif font-bold text-white">
+            Lobby Setup
+          </h2>
+
+          <p class="text-xs text-slate-400">
+            Scan the QR code with each player's phone.
+          </p>
+
+        </div>
+
+        <div class="flex flex-col items-center gap-4">
+
+          <div class="flex items-center gap-5 bg-noir-950 p-4 rounded-2xl border border-slate-800">
+
+            <div class="text-center">
+
+              <div class="text-[10px] text-slate-400 uppercase tracking-widest">
+                Room Code
+              </div>
+
+              <div
+                id="display-room-code"
+                class="text-4xl font-mono font-black text-crimson-500 tracking-widest"
+              >
+                ----
+              </div>
+
+            </div>
+
+            <div class="w-px h-20 bg-slate-800"></div>
+
+            <div
+              id="qrcode"
+              class="p-2 bg-white rounded-xl min-w-[120px] min-h-[120px] flex items-center justify-center"
+            ></div>
+
+          </div>
+
+          <button
+            id="btn-copy-link"
+            class="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg
+                   text-xs font-semibold flex items-center gap-2"
+          >
+            <i data-lucide="copy" class="w-4 h-4"></i>
+            Copy Join Link
+          </button>
+
+          <div
+            id="network-address"
+            class="text-[10px] text-slate-500 text-center max-w-xs break-all"
+          ></div>
+
+        </div>
+
+      </div>
+
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+        <!-- Players -->
+
+        <div class="glass-panel p-6 rounded-3xl space-y-4 md:col-span-2">
+
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+
+            <h3 class="text-lg font-bold flex items-center gap-2">
+
+              <i data-lucide="users" class="w-5 h-5 text-indigo-400"></i>
+
+              Connected Players
+              (<span id="player-count">0</span>/20)
+
+            </h3>
+
+            <span class="text-xs text-slate-400">
+              Minimum 4
+            </span>
+
+          </div>
+
+          <div
+            id="host-player-list"
+            class="grid grid-cols-2 sm:grid-cols-3 gap-3 min-h-[220px]"
+          ></div>
+
+        </div>
+
+
+        <!-- Roles -->
+
+        <div class="glass-panel p-6 rounded-3xl space-y-4 flex flex-col justify-between">
+
+          <div class="space-y-4">
+
+            <h3 class="text-lg font-bold flex items-center gap-2 border-b border-slate-800 pb-3">
+              <i data-lucide="sliders" class="w-5 h-5 text-crimson-400"></i>
+              Role Setup
+            </h3>
+
+            <!-- Murderers -->
+
+            <div class="flex items-center justify-between bg-noir-950 p-3 rounded-xl border border-slate-800">
+
+              <span class="font-bold text-crimson-400">
+                Murderers
+              </span>
+
+              <div class="flex items-center gap-2">
+
+                <button
+                  class="role-adj-btn px-3 py-1 bg-slate-800 rounded hover:bg-slate-700"
+                  data-role="murderers"
+                  data-change="-1"
+                >
+                  −
+                </button>
+
+                <span id="cfg-murderers" class="font-mono font-bold w-5 text-center">
+                  2
+                </span>
+
+                <button
+                  class="role-adj-btn px-3 py-1 bg-slate-800 rounded hover:bg-slate-700"
+                  data-role="murderers"
+                  data-change="1"
+                >
+                  +
+                </button>
+
+              </div>
+            </div>
+
+
+            <!-- Detective -->
+
+            <div class="flex items-center justify-between bg-noir-950 p-3 rounded-xl border border-slate-800">
+
+              <span class="font-bold text-blue-400">
+                Detective
+              </span>
+
+              <div class="flex items-center gap-2">
+
+                <button
+                  class="role-adj-btn px-3 py-1 bg-slate-800 rounded hover:bg-slate-700"
+                  data-role="detectives"
+                  data-change="-1"
+                >
+                  −
+                </button>
+
+                <span id="cfg-detectives" class="font-mono font-bold w-5 text-center">
+                  1
+                </span>
+
+                <button
+                  class="role-adj-btn px-3 py-1 bg-slate-800 rounded hover:bg-slate-700"
+                  data-role="detectives"
+                  data-change="1"
+                >
+                  +
+                </button>
+
+              </div>
+            </div>
+
+
+            <!-- Doctor -->
+
+            <div class="flex items-center justify-between bg-noir-950 p-3 rounded-xl border border-slate-800">
+
+              <span class="font-bold text-emerald-400">
+                Doctor
+              </span>
+
+              <div class="flex items-center gap-2">
+
+                <button
+                  class="role-adj-btn px-3 py-1 bg-slate-800 rounded hover:bg-slate-700"
+                  data-role="doctors"
+                  data-change="-1"
+                >
+                  −
+                </button>
+
+                <span id="cfg-doctors" class="font-mono font-bold w-5 text-center">
+                  1
+                </span>
+
+                <button
+                  class="role-adj-btn px-3 py-1 bg-slate-800 rounded hover:bg-slate-700"
+                  data-role="doctors"
+                  data-change="1"
+                >
+                  +
+                </button>
+
+              </div>
+            </div>
+
+
+            <div class="bg-noir-950/60 p-3 rounded-xl border border-slate-800/40">
+
+              <div class="flex justify-between">
+
+                <span class="text-slate-400">
+                  Innocents
+                </span>
+
+                <span id="cfg-innocents"
+                      class="font-mono font-bold text-slate-200">
+                  0
+                </span>
+
+              </div>
+
+            </div>
+
+          </div>
+
+
+          <button
+            id="btn-start-game"
+            disabled
+            class="w-full py-4 bg-crimson-600 disabled:opacity-40
+                   disabled:cursor-not-allowed hover:bg-crimson-500
+                   text-white font-bold rounded-2xl transition uppercase"
+          >
+            Distribute Roles & Start
+          </button>
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- ========================================================= -->
+    <!-- HOST GAME -->
+    <!-- ========================================================= -->
+
+    <section id="view-host-game"
+             class="w-full max-w-6xl mx-auto hidden z-10 space-y-6">
+
+      <div class="glass-panel p-5 rounded-3xl flex flex-col md:flex-row
+                  items-center justify-between gap-4">
+
+        <div>
+
+          <div
+            id="host-phase-badge"
+            class="px-3 py-1 bg-crimson-950 text-crimson-400
+                   border border-crimson-800 text-xs font-bold
+                   rounded-full uppercase inline-block"
+          >
+            NIGHT PHASE
+          </div>
+
+          <h2
+            id="host-phase-title"
+            class="text-3xl font-serif font-bold text-white mt-2"
+          >
+            Ask Everyone To Close Their Eyes
+          </h2>
+
+        </div>
+
+        <div class="flex items-center gap-3">
+
+          <div class="bg-noir-950 px-5 py-2.5 rounded-2xl border border-slate-800 text-center">
+
+            <div class="text-[10px] uppercase text-slate-400">
+              Countdown
+            </div>
+
+            <div
+              id="host-timer"
+              class="text-2xl font-mono font-bold text-crimson-400"
+            >
+              00:00
+            </div>
+
+          </div>
+
+          <button
+            id="btn-host-next-phase"
+            class="px-5 py-3 bg-crimson-600 hover:bg-crimson-500
+                   font-bold rounded-xl text-white"
+          >
+            Force Advance
+          </button>
+
+        </div>
+
+      </div>
+
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+        <div class="glass-panel p-6 rounded-3xl md:col-span-2 space-y-4">
+
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+
+            <h3 class="text-lg font-bold">
+              Host Script & Actions
+            </h3>
+
+            <span
+              id="night-action-tracker"
+              class="text-xs font-mono bg-slate-800 px-2.5 py-1 rounded-full"
+            >
+              0 Submissions
+            </span>
+
+          </div>
+
+          <div
+            id="host-dynamic-stage"
+            class="min-h-[300px]"
+          ></div>
+
+        </div>
+
+
+        <div class="glass-panel p-6 rounded-3xl space-y-4">
+
+          <h3 class="text-lg font-bold border-b border-slate-800 pb-3">
+            Town Roster
+          </h3>
+
+          <div
+            id="host-roster-list"
+            class="space-y-2 max-h-[400px] overflow-y-auto"
+          ></div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- ========================================================= -->
+    <!-- PLAYER -->
+    <!-- ========================================================= -->
+
+    <section id="view-player"
+             class="w-full max-w-sm mx-auto hidden z-10 space-y-5">
+
+      <div class="glass-panel p-4 rounded-2xl flex items-center justify-between">
+
+        <div class="flex items-center gap-3">
+
+          <div
+            id="player-avatar"
+            class="w-10 h-10 rounded-full bg-crimson-900/60
+                   border border-crimson-600 flex items-center justify-center
+                   font-bold"
+          >
+            P
+          </div>
+
+          <div>
+
+            <div
+              id="player-display-name"
+              class="font-bold text-white text-sm"
+            >
+              Player
+            </div>
+
+            <div
+              id="player-status-tag"
+              class="text-[10px] text-emerald-400 font-semibold uppercase"
+            >
+              Connecting
+            </div>
+
+          </div>
+
+        </div>
+
+        <div
+          id="player-room-badge"
+          class="px-2.5 py-1 bg-noir-950 border border-slate-800
+                 text-xs font-mono text-slate-400 rounded-lg"
+        >
+          ----
+        </div>
+
+      </div>
+
+
+      <!-- Role -->
+
+      <div class="glass-panel p-5 rounded-3xl text-center space-y-3">
+
+        <div
+          id="role-reveal-box"
+          class="py-6 px-4 rounded-2xl bg-noir-950 border
+                 border-slate-800 cursor-pointer role-card-cover"
+        >
+
+          <div id="role-hidden-content" class="space-y-2">
+
+            <i data-lucide="eye-off"
+               class="w-8 h-8 text-slate-500 mx-auto">
+            </i>
+
+            <div class="text-xs font-semibold text-slate-400">
+              PRESS / HOLD TO REVEAL ROLE
+            </div>
+
+          </div>
+
+          <div id="role-revealed-content"
+               class="hidden space-y-2">
+
+            <div
+              id="player-role-title"
+              class="text-2xl font-serif font-black uppercase"
+            >
+              INNOCENT
+            </div>
+
+            <p
+              id="player-role-desc"
+              class="text-xs text-slate-300"
+            ></p>
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <div
+        id="player-action-box"
+        class="glass-panel p-5 rounded-3xl min-h-[220px]
+               flex flex-col justify-center"
+      ></div>
+
+    </section>
+
+
+    <!-- ========================================================= -->
+    <!-- GAME OVER -->
+    <!-- ========================================================= -->
+
+    <section id="view-game-over"
+             class="w-full max-w-lg mx-auto hidden z-10 text-center">
+
+      <div class="glass-panel-red p-8 rounded-3xl space-y-6 pulse-glow">
+
+        <div class="w-20 h-20 mx-auto rounded-full bg-crimson-900/60
+                    border border-crimson-500 flex items-center justify-center">
+
+          <i data-lucide="trophy"
+             class="w-10 h-10 text-crimson-400">
+          </i>
+
+        </div>
+
+        <div>
+
+          <h2
+            id="victory-title"
+            class="text-4xl font-serif font-black text-white uppercase"
+          >
+            MURDERERS WIN
+          </h2>
+
+          <p
+            id="victory-subtitle"
+            class="text-sm text-slate-300 mt-2"
+          ></p>
+
+        </div>
+
+        <div class="bg-noir-950/80 p-4 rounded-2xl border border-slate-800 text-left">
+
+          <h4 class="text-xs uppercase text-slate-400 font-bold mb-3">
+            Final Role Reveal
+          </h4>
+
+          <div
+            id="final-roles-list"
+            class="space-y-1.5 text-sm max-h-48 overflow-y-auto"
+          ></div>
+
+        </div>
+
+        <button
+          id="btn-restart"
+          class="w-full py-4 bg-crimson-600 hover:bg-crimson-500
+                 text-white font-bold rounded-xl"
+        >
+          Return to Title Screen
+        </button>
+
+      </div>
+
+    </section>
+
+  </main>
+
+  <footer class="py-3 text-center text-xs text-slate-600">
+    Whispers in the Dark • WebRTC Multiplayer
+  </footer>
+
+
+<script>
+
+/* ============================================================
+   AUDIO
+============================================================ */
+
+class AudioEngine {
+
+  constructor() {
+    this.ctx = null;
+    this.muted = false;
+  }
+
+  init() {
+
+    if (!this.ctx) {
+
+      const AudioContext =
+        window.AudioContext ||
+        window.webkitAudioContext;
+
+      if (!AudioContext) return;
+
+      this.ctx = new AudioContext();
+    }
+
+    if (this.ctx.state === 'suspended') {
+      this.ctx.resume();
+    }
+  }
+
+  playPhaseChime(isNight) {
+
+    if (this.muted) return;
+
+    this.init();
+
+    if (!this.ctx) return;
+
+    const now = this.ctx.currentTime;
+
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+
+    if (isNight) {
+
+      osc.type = 'sawtooth';
+
+      osc.frequency.setValueAtTime(110, now);
+
+      osc.frequency.exponentialRampToValueAtTime(
+        35,
+        now + 1.2
+      );
+
+      gain.gain.setValueAtTime(.25, now);
+
+      gain.gain.exponentialRampToValueAtTime(
+        .001,
+        now + 1.2
+      );
+
+      osc.start();
+      osc.stop(now + 1.2);
+
+    } else {
+
+      osc.type = 'sine';
+
+      osc.frequency.setValueAtTime(320, now);
+
+      osc.frequency.exponentialRampToValueAtTime(
+        640,
+        now + .8
+      );
+
+      gain.gain.setValueAtTime(.2, now);
+
+      gain.gain.exponentialRampToValueAtTime(
+        .001,
+        now + .8
+      );
+
+      osc.start();
+      osc.stop(now + .8);
+    }
+  }
+
+  playVoteSting() {
+
+    if (this.muted) return;
+
+    this.init();
+
+    if (!this.ctx) return;
+
+    const now = this.ctx.currentTime;
+
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'triangle';
+
+    osc.frequency.setValueAtTime(220, now);
+
+    gain.gain.setValueAtTime(.2, now);
+
+    gain.gain.exponentialRampToValueAtTime(
+      .001,
+      now + .25
+    );
+
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+
+    osc.start();
+    osc.stop(now + .25);
+  }
+}
+
+const audio = new AudioEngine();
+
+
+/* ============================================================
+   NETWORK ENGINE
+============================================================ */
+
+class NetworkEngine {
+
+  constructor() {
+
+    this.peer = null;
+
+    this.isHost = false;
+
+    this.roomCode = '';
+
+    this.connections = {};
+
+    this.hostConn = null;
+
+    this.onMessageCallback = null;
+
+    this.connected = false;
+  }
+
+
+  generateRoomCode() {
+
+    const chars =
+      'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+    let code = '';
+
+    for (let i = 0; i < 4; i++) {
+
+      code += chars[
+        Math.floor(Math.random() * chars.length)
+      ];
+    }
+
+    return code;
+  }
+
+
+  initHost(roomCode, callback) {
+
+    this.isHost = true;
+
+    this.roomCode = roomCode;
+
+    this.onMessageCallback = callback;
+
+    const peerId =
+      `whispers-dark-${roomCode.toLowerCase()}`;
+
+    console.log('Creating host:', peerId);
+
+    try {
+
+      this.peer = new Peer(peerId, {
+        debug: 2
+      });
+
+    } catch (error) {
+
+      console.error(error);
+
+      showToast(
+        'PeerJS could not start.',
+        'error'
+      );
+
+      return;
+    }
+
+
+    this.peer.on('open', id => {
+
+      console.log('HOST PEER OPEN:', id);
+
+      this.connected = true;
+
+      showToast('Room is ready!');
+    });
+
+
+    this.peer.on('connection', conn => {
+
+      console.log(
+        'Incoming connection:',
+        conn.peer
+      );
+
+      conn.on('open', () => {
+
+        console.log(
+          'Player connection opened:',
+          conn.peer
+        );
+
+        this.connections[conn.peer] = conn;
+
+      });
+
+
+      conn.on('data', data => {
+
+        console.log(
+          'HOST RECEIVED:',
+          conn.peer,
+          data
+        );
+
+        this.onMessageCallback(
+          conn.peer,
+          data
+        );
+      });
+
+
+      conn.on('close', () => {
+
+        console.log(
+          'Player disconnected:',
+          conn.peer
+        );
+
+        delete this.connections[conn.peer];
+
+        this.onMessageCallback(
+          conn.peer,
+          {
+            type: 'CLIENT_DISCONNECTED'
+          }
+        );
+      });
+
+
+      conn.on('error', error => {
+
+        console.error(
+          'Connection error:',
+          error
+        );
+      });
+
+    });
+
+
+    this.peer.on('error', error => {
+
+      console.error(
+        'HOST PEER ERROR:',
+        error
+      );
+
+      if (error.type === 'unavailable-id') {
+
+        showToast(
+          'That room code is already being used. Create another room.',
+          'error'
+        );
+      } else {
+
+        showToast(
+          'Host connection error: ' + error.type,
+          'error'
+        );
+      }
+    });
+
+  }
+
+
+  initClient(roomCode, playerId, playerName, callback) {
+
+    this.isHost = false;
+
+    this.roomCode = roomCode;
+
+    this.onMessageCallback = callback;
+
+    const hostPeerId =
+      `whispers-dark-${roomCode.toLowerCase()}`;
+
+    console.log(
+      'Connecting to host:',
+      hostPeerId
+    );
+
+
+    try {
+
+      this.peer = new Peer({
+        debug: 2
+      });
+
+    } catch (error) {
+
+      console.error(error);
+
+      showToast(
+        'Could not start connection.',
+        'error'
+      );
+
+      return;
+    }
+
+
+    this.peer.on('open', clientPeerId => {
+
+      console.log(
+        'CLIENT PEER OPEN:',
+        clientPeerId
+      );
+
+      showToast('Connecting to host...');
+
+
+      this.hostConn =
+        this.peer.connect(hostPeerId, {
+          reliable: true
+        });
+
+
+      this.hostConn.on('open', () => {
+
+        console.log(
+          'CONNECTED TO HOST'
+        );
+
+        this.connected = true;
+
+        showToast('Connected to host!');
+
+
+        // IMPORTANT:
+        // Only send the join request after
+        // PeerJS says the connection is open.
+
+        this.hostConn.send({
+
+          type: 'JOIN_REQUEST',
+
+          player: {
+
+            id: playerId,
+
+            name: playerName
+
+          }
+
+        });
+
+      });
+
+
+      this.hostConn.on('data', data => {
+
+        console.log(
+          'CLIENT RECEIVED:',
+          data
+        );
+
+        this.onMessageCallback(data);
+      });
+
+
+      this.hostConn.on('close', () => {
+
+        this.connected = false;
+
+        showToast(
+          'Disconnected from host.',
+          'error'
+        );
+      });
+
+
+      this.hostConn.on('error', error => {
+
+        console.error(
+          'CLIENT CONNECTION ERROR:',
+          error
+        );
+
+        showToast(
+          'Could not connect to room.',
+          'error'
+        );
+      });
+
+    });
+
+
+    this.peer.on('error', error => {
+
+      console.error(
+        'CLIENT PEER ERROR:',
+        error
+      );
+
+      if (error.type === 'peer-unavailable') {
+
+        showToast(
+          'Room not found. Check the room code.',
+          'error'
+        );
+
+      } else {
+
+        showToast(
+          'Connection error: ' + error.type,
+          'error'
+        );
+      }
+    });
+
+  }
+
+
+  sendToHost(payload) {
+
+    if (
+      this.hostConn &&
+      this.hostConn.open
+    ) {
+
+      console.log(
+        'SEND HOST:',
+        payload
+      );
+
+      this.hostConn.send(payload);
+
+    } else {
+
+      console.warn(
+        'Host connection is not open.'
+      );
+
+      showToast(
+        'Not connected to host.',
+        'error'
+      );
+    }
+  }
+
+
+  sendToClient(peerId, payload) {
+
+    const conn =
+      this.connections[peerId];
+
+    if (conn && conn.open) {
+
+      console.log(
+        'SEND PLAYER:',
+        peerId,
+        payload
+      );
+
+      conn.send(payload);
+
+    } else {
+
+      console.warn(
+        'No connection for player:',
+        peerId
+      );
+    }
+  }
+
+
+  broadcastToClients(payload) {
+
+    console.log(
+      'BROADCAST:',
+      payload
+    );
+
+    Object.values(this.connections).forEach(
+      conn => {
+
+        if (conn && conn.open) {
+
+          conn.send(payload);
+        }
+
+      }
+    );
+  }
+
+
+  destroy() {
+
+    Object.values(this.connections).forEach(
+      conn => {
+
+        try {
+          conn.close();
+        } catch {}
+      }
+    );
+
+    if (this.hostConn) {
+
+      try {
+        this.hostConn.close();
+      } catch {}
+    }
+
+    if (this.peer) {
+
+      try {
+        this.peer.destroy();
+      } catch {}
+    }
+
+    this.connections = {};
+
+    this.peer = null;
+  }
+}
+
+
+const net = new NetworkEngine();
+
+
+/* ============================================================
+   GAME STATE
+============================================================ */
+
+const GAME_PHASES = {
+
+  LOBBY: 'LOBBY',
+
+  NIGHT: 'NIGHT',
+
+  DAY_REVEAL: 'DAY_REVEAL',
+
+  DAY_VOTE: 'DAY_VOTE',
+
+  GAME_OVER: 'GAME_OVER'
+};
+
+
+const ROLES = {
+
+  MURDERER: 'MURDERER',
+
+  DETECTIVE: 'DETECTIVE',
+
+  DOCTOR: 'DOCTOR',
+
+  INNOCENT: 'INNOCENT'
+};
+
+
+let hostState = {
+
+  roomCode: '',
+
+  phase: GAME_PHASES.LOBBY,
+
+  players: {},
+
+  roleCounts: {
+
+    murderers: 2,
+
+    detectives: 1,
+
+    doctors: 1
+  },
+
+  nightActions: {
+
+    murdererTarget: null,
+
+    doctorTarget: null,
+
+    detectiveTarget: null
+  },
+
+  lastKilled: null,
+
+  savedByDoctor: false,
+
+  timerSeconds: 0,
+
+  timerInterval: null
+};
+
+
+let localPlayer = {
+
+  id:
+    'player_' +
+    Math.random()
+      .toString(36)
+      .substring(2, 10),
+
+  name: '',
+
+  roomCode: '',
+
+  role: null,
+
+  isAlive: true,
+
+  hasSubmittedNightAction: false,
+
+  hasVoted: false
+};
+
+
+/* ============================================================
+   VIEWS
+============================================================ */
+
+const views = {
+
+  landing:
+    document.getElementById('view-landing'),
+
+  join:
+    document.getElementById('view-join'),
+
+  hostLobby:
+    document.getElementById('view-host-lobby'),
+
+  hostGame:
+    document.getElementById('view-host-game'),
+
+  player:
+    document.getElementById('view-player'),
+
+  gameOver:
+    document.getElementById('view-game-over')
+};
+
+
+function showView(view) {
+
+  Object.values(views).forEach(
+    v => v.classList.add('hidden')
+  );
+
+  view.classList.remove('hidden');
+
+  lucide.createIcons();
+}
+
+
+/* ============================================================
+   TOAST
+============================================================ */
+
+function showToast(
+  message,
+  type = 'info'
+) {
+
+  const container =
+    document.getElementById(
+      'toast-container'
+    );
+
+  const toast =
+    document.createElement('div');
+
+  toast.className =
+    `glass-panel px-4 py-2.5 rounded-xl
+     text-xs md:text-sm font-semibold shadow-xl
+     border ${
+       type === 'error'
+         ? 'border-crimson-500 text-crimson-400'
+         : 'border-slate-700 text-slate-200'
+     }`;
+
+  toast.textContent = message;
+
+  container.appendChild(toast);
+
+  setTimeout(
+    () => toast.remove(),
+    3000
+  );
+}
+
+
+/* ============================================================
+   QR / URL
+============================================================ */
+
+function getJoinURL(roomCode) {
+
+  const room =
+    encodeURIComponent(roomCode);
+
+  const pathname =
+    window.location.pathname;
+
+
+  /*
+    If deployed online:
+    https://your-site.com/?room=ABCD
+  */
+
+  const hostname =
+    window.location.hostname;
+
+
+  if (
+    hostname !== 'localhost' &&
+    hostname !== '127.0.0.1' &&
+    hostname !== ''
+  ) {
+
+    return `${window.location.origin}${pathname}?room=${room}`;
+  }
+
+
+  /*
+    LOCAL DEVELOPMENT
+
+    We determine the computer's address from
+    the browser's current URL if possible.
+
+    If you are opening localhost, you MUST set
+    LOCAL_NETWORK_IP below.
+  */
+
+  const LOCAL_NETWORK_IP =
+    '192.168.1.100';
+
+
+  const port =
+    window.location.port
+      ? ':' + window.location.port
+      : '';
+
+
+  return `http://${LOCAL_NETWORK_IP}${port}${pathname}?room=${room}`;
+}
+
+
+/* ============================================================
+   DOM READY
+============================================================ */
+
+window.addEventListener(
+  'DOMContentLoaded',
+  () => {
+
+    lucide.createIcons();
+
+
+    const params =
+      new URLSearchParams(
+        window.location.search
+      );
+
+    const room =
+      params.get('room');
+
+
+    if (room) {
+
+      document.getElementById(
+        'input-room-code'
+      ).value =
+        room.toUpperCase();
+
+      showView(views.join);
+    }
+
+  }
+);
+
+
+/* ============================================================
+   SOUND BUTTON
+============================================================ */
+
+document
+  .getElementById('sound-toggle-btn')
+  .addEventListener(
+    'click',
+    () => {
+
+      audio.muted =
+        !audio.muted;
+
+      const icon =
+        document.getElementById(
+          'sound-icon'
+        );
+
+      icon.setAttribute(
+        'data-lucide',
+        audio.muted
+          ? 'volume-x'
+          : 'volume-2'
+      );
+
+      lucide.createIcons();
+    }
+  );
+
+
+/* ============================================================
+   HOST CREATION
+============================================================ */
+
+document
+  .getElementById('btn-choice-host')
+  .addEventListener(
+    'click',
+    () => {
+
+      audio.init();
+
+
+      // Clean up previous peer
+      net.destroy();
+
+
+      const roomCode =
+        net.generateRoomCode();
+
+
+      hostState.roomCode =
+        roomCode;
+
+
+      hostState.phase =
+        GAME_PHASES.LOBBY;
+
+
+      hostState.players = {};
+
+
+      document.getElementById(
+        'display-room-code'
+      ).textContent =
+        roomCode;
+
+
+      // Generate QR
+
+      const qrContainer =
+        document.getElementById(
+          'qrcode'
+        );
+
+      qrContainer.innerHTML = '';
+
+
+      const joinURL =
+        getJoinURL(roomCode);
+
+
+      console.log(
+        'JOIN URL:',
+        joinURL
+      );
+
+
+      new QRCode(
+        qrContainer,
+        {
+          text: joinURL,
+
+          width: 120,
+
+          height: 120,
+
+          colorDark: '#08080a',
+
+          colorLight: '#ffffff',
+
+          correctLevel:
+            QRCode.CorrectLevel.H
+        }
+      );
+
+
+      document.getElementById(
+        'network-address'
+      ).textContent =
+        joinURL;
+
+
+      document
+        .getElementById('btn-copy-link')
+        .onclick =
+        async () => {
+
+          try {
+
+            await navigator.clipboard.writeText(
+              joinURL
+            );
+
+            showToast(
+              'Join link copied!'
+            );
+
+          } catch {
+
+            showToast(
+              'Copy failed. Use the QR code.',
+              'error'
+            );
+          }
+        };
+
+
+      net.initHost(
+        roomCode,
+        handleHostReceivedData
+      );
+
+
+      showView(
+        views.hostLobby
+      );
+
+
+      updateHostLobbyUI();
+
+    }
+  );
+
+
+/* ============================================================
+   MANUAL JOIN BUTTON
+============================================================ */
+
+document
+  .getElementById('btn-choice-join')
+  .addEventListener(
+    'click',
+    () => {
+
+      audio.init();
+
+      showView(views.join);
+    }
+  );
+
+
+/* ============================================================
+   BACK BUTTON
+============================================================ */
+
+document
+  .querySelectorAll('.btn-back')
+  .forEach(
+    button => {
+
+      button.addEventListener(
+        'click',
+        () => {
+
+          showView(
+            views.landing
+          );
+        }
+      );
+
+    }
+  );
+
+
+/* ============================================================
+   PLAYER JOIN
+============================================================ */
+
+document
+  .getElementById('form-join')
+  .addEventListener(
+    'submit',
+    event => {
+
+      event.preventDefault();
+
+
+      const roomCode =
+        document
+          .getElementById(
+            'input-room-code'
+          )
+          .value
+          .trim()
+          .toUpperCase();
+
+
+      const name =
+        document
+          .getElementById(
+            'input-player-name'
+          )
+          .value
+          .trim();
+
+
+      if (
+        roomCode.length !== 4
+      ) {
+
+        showToast(
+          'Room code must be 4 characters.',
+          'error'
+        );
+
+        return;
+      }
+
+
+      if (!name) {
+
+        showToast(
+          'Enter your name.',
+          'error'
+        );
+
+        return;
+      }
+
+
+      localPlayer.roomCode =
+        roomCode;
+
+      localPlayer.name =
+        name;
+
+
+      document.getElementById(
+        'player-display-name'
+      ).textContent =
+        name;
+
+
+      document.getElementById(
+        'player-room-badge'
+      ).textContent =
+        roomCode;
+
+
+      document.getElementById(
+        'player-avatar'
+      ).textContent =
+        name
+          .charAt(0)
+          .toUpperCase();
+
+
+      document.getElementById(
+        'player-status-tag'
+      ).textContent =
+        'Connecting';
+
+
+      renderPlayerWaitScreen(
+        'Connecting to host...'
+      );
+
+
+      showView(
+        views.player
+      );
+
+
+      net.destroy();
+
+
+      net.initClient(
+        roomCode,
+
+        localPlayer.id,
+
+        localPlayer.name,
+
+        handleClientReceivedData
+      );
+
+    }
+  );
+
+
+/* ============================================================
+   ROLE ADJUSTMENT
+============================================================ */
+
+document
+  .querySelectorAll('.role-adj-btn')
+  .forEach(
+    button => {
+
+      button.addEventListener(
+        'click',
+        event => {
+
+          const role =
+            event.currentTarget.dataset.role;
+
+          const change =
+            Number(
+              event.currentTarget.dataset.change
+            );
+
+
+          const current =
+            hostState.roleCounts[role];
+
+
+          hostState.roleCounts[role] =
+            Math.max(
+              1,
+              Math.min(
+                8,
+                current + change
+              )
+            );
+
+
+          document.getElementById(
+            `cfg-${role}`
+          ).textContent =
+            hostState.roleCounts[role];
+
+
+          updateInnocentCount();
+        }
+      );
+
+    }
+  );
+
+
+function updateInnocentCount() {
+
+  const total =
+    Object.keys(
+      hostState.players
+    ).length;
+
+
+  const special =
+    hostState.roleCounts.murderers +
+    hostState.roleCounts.detectives +
+    hostState.roleCounts.doctors;
+
+
+  const innocents =
+    Math.max(
+      0,
+      total - special
+    );
+
+
+  document.getElementById(
+    'cfg-innocents'
+  ).textContent =
+    innocents;
+}
+
+
+/* ============================================================
+   START GAME
+============================================================ */
+
+document
+  .getElementById('btn-start-game')
+  .addEventListener(
+    'click',
+    () => {
+
+      const players =
+        Object.values(
+          hostState.players
+        );
+
+
+      if (players.length < 4) {
+
+        showToast(
+          'At least 4 players are required.',
+          'error'
+        );
+
+        return;
+      }
+
+
+      const specialCount =
+        hostState.roleCounts.murderers +
+        hostState.roleCounts.detectives +
+        hostState.roleCounts.doctors;
+
+
+      if (
+        specialCount >= players.length
+      ) {
+
+        showToast(
+          'You need at least one Innocent.',
+          'error'
+        );
+
+        return;
+      }
+
+
+      assignRoles();
+
+
+      hostState.phase =
+        GAME_PHASES.NIGHT;
+
+
+      players.forEach(
+        player => {
+
+          net.sendToClient(
+            player.peerId,
+            {
+              type: 'ROLE_ASSIGNMENT',
+
+              role: player.role,
+
+              players:
+                getPublicPlayerList()
+            }
+          );
+
+        }
+      );
+
+
+      net.broadcastToClients({
+        type: 'PHASE_CHANGE',
+
+        phase:
+          GAME_PHASES.NIGHT,
+
+        players:
+          getPublicPlayerList()
+      });
+
+
+      showView(
+        views.hostGame
+      );
+
+
+      startNightPhase();
+
+    }
+  );
+
+
+/* ============================================================
+   HOST MESSAGE HANDLER
+============================================================ */
+
+function handleHostReceivedData(
+  peerId,
+  data
+) {
+
+  if (!data) return;
+
+
+  switch (data.type) {
+
+
+    case 'JOIN_REQUEST': {
+
+      if (
+        hostState.phase !==
+        GAME_PHASES.LOBBY
+      ) {
+
+        net.sendToClient(
+          peerId,
+          {
+            type: 'ERROR',
+
+            message:
+              'Game already started.'
+          }
+        );
+
+        return;
+      }
+
+
+      const player =
+        data.player;
+
+
+      if (!player) return;
+
+
+      if (
+        Object.keys(
+          hostState.players
+        ).length >= 20
+      ) {
+
+        net.sendToClient(
+          peerId,
+          {
+            type: 'ERROR',
+
+            message:
+              'Room is full.'
+          }
+        );
+
+        return;
+      }
+
+
+      // Prevent duplicate players
+
+      const existing =
+        Object.values(
+          hostState.players
+        ).find(
+          p => p.id === player.id
+        );
+
+
+      if (existing) {
+
+        existing.peerId =
+          peerId;
+
+        net.sendToClient(
+          peerId,
+          {
+            type: 'JOIN_SUCCESS',
+
+            playerId:
+              existing.id
+          }
+        );
+
+        return;
+      }
+
+
+      hostState.players[
+        player.id
+      ] = {
+
+        id:
+          player.id,
+
+        peerId:
+          peerId,
+
+        name:
+          sanitizeName(player.name),
+
+        role:
+          null,
+
+        isAlive:
+          true,
+
+        vote:
+          null
+      };
+
+
+      console.log(
+        'PLAYER ADDED:',
+        hostState.players[player.id]
+      );
+
+
+      updateHostLobbyUI();
+
+
+      showToast(
+        `${player.name} joined!`
+      );
+
+
+      net.sendToClient(
+        peerId,
+        {
+          type: 'JOIN_SUCCESS',
+
+          playerId:
+            player.id,
+
+          roomCode:
+            hostState.roomCode
+        }
+      );
+
+
+      break;
+    }
+
+
+    case 'NIGHT_ACTION':
+
+      handleNightActionSubmit(
+        peerId,
+
+        data.action,
+
+        data.targetId
+      );
+
+      break;
+
+
+    case 'CAST_VOTE':
+
+      handleVoteSubmit(
+        peerId,
+
+        data.targetId
+      );
+
+      break;
+
+
+    case 'CLIENT_DISCONNECTED': {
+
+      const player =
+        Object.values(
+          hostState.players
+        ).find(
+          p => p.peerId === peerId
+        );
+
+
+      if (player) {
+
+        showToast(
+          `${player.name} disconnected.`
+        );
+      }
+
+      break;
+    }
+
+  }
+}
+
+
+/* ============================================================
+   SANITIZE PLAYER NAME
+============================================================ */
+
+function sanitizeName(name) {
+
+  return String(name)
+    .replace(/[<>]/g, '')
+    .trim()
+    .substring(0, 14);
+}
+
+
+/* ============================================================
+   HOST LOBBY UI
+============================================================ */
+
+function updateHostLobbyUI() {
+
+  const list =
+    document.getElementById(
+      'host-player-list'
+    );
+
+
+  const players =
+    Object.values(
+      hostState.players
+    );
+
+
+  document.getElementById(
+    'player-count'
+  ).textContent =
+    players.length;
+
+
+  if (players.length === 0) {
+
+    list.innerHTML = `
+
+      <div class="col-span-full flex flex-col
+                  items-center justify-center py-12
+                  text-slate-500 text-center space-y-2">
+
+        <i data-lucide="radio"
+           class="w-8 h-8 animate-pulse text-crimson-500">
+        </i>
+
+        <p class="text-sm">
+          Waiting for players to scan the QR code...
+        </p>
+
+      </div>
+
+    `;
+
+  } else {
+
+    list.innerHTML =
+      players.map(
+        player => `
+
+        <div class="bg-noir-950 p-3 rounded-2xl
+                    border border-slate-800 flex items-center gap-3">
+
+          <div class="w-8 h-8 rounded-full
+                      bg-crimson-900/40
+                      text-crimson-400
+                      border border-crimson-800
+                      flex items-center justify-center
+                      font-bold text-xs">
+
+            ${escapeHTML(
+              player.name.charAt(0).toUpperCase()
+            )}
+
+          </div>
+
+          <div class="truncate text-sm font-semibold text-slate-200">
+
+            ${escapeHTML(player.name)}
+
+          </div>
+
+        </div>
+
+      `
+      ).join('');
+  }
+
+
+  document.getElementById(
+    'btn-start-game'
+  ).disabled =
+    players.length < 4;
+
+
+  updateInnocentCount();
+
+
+  lucide.createIcons();
+}
+
+
+/* ============================================================
+   ESCAPE HTML
+============================================================ */
+
+function escapeHTML(value) {
+
+  const div =
+    document.createElement('div');
+
+  div.textContent =
+    value;
+
+  return div.innerHTML;
+}
+
+
+/* ============================================================
+   ASSIGN ROLES
+============================================================ */
+
+function assignRoles() {
+
+  const players =
+    Object.values(
+      hostState.players
+    );
+
+
+  const shuffled =
+    [...players].sort(
+      () => Math.random() - .5
+    );
+
+
+  let index = 0;
+
+
+  shuffled.forEach(
+    player => {
+
+      if (
+        index <
+        hostState.roleCounts.murderers
+      ) {
+
+        player.role =
+          ROLES.MURDERER;
+
+      } else if (
+        index <
+        hostState.roleCounts.murderers +
+        hostState.roleCounts.detectives
+      ) {
+
+        player.role =
+          ROLES.DETECTIVE;
+
+      } else if (
+        index <
+        hostState.roleCounts.murderers +
+        hostState.roleCounts.detectives +
+        hostState.roleCounts.doctors
+      ) {
+
+        player.role =
+          ROLES.DOCTOR;
+
+      } else {
+
+        player.role =
+          ROLES.INNOCENT;
+      }
+
+
+      player.isAlive =
+        true;
+
+      player.vote =
+        null;
+
+
+      index++;
+    }
+  );
+}
+
+
+/* ============================================================
+   PUBLIC PLAYER LIST
+============================================================ */
+
+function getPublicPlayerList() {
+
+  return Object.values(
+    hostState.players
+  ).map(
+    player => ({
+
+      id:
+        player.id,
+
+      name:
+        player.name,
+
+      isAlive:
+        player.isAlive
+    })
+  );
+}
+
+
+/* ============================================================
+   NIGHT
+============================================================ */
+
+function startNightPhase() {
+
+  hostState.phase =
+    GAME_PHASES.NIGHT;
+
+
+  hostState.nightActions = {
+
+    murdererTarget:
+      null,
+
+    doctorTarget:
+      null,
+
+    detectiveTarget:
+      null
+  };
+
+
+  hostState.lastKilled =
+    null;
+
+  hostState.savedByDoctor =
+    false;
+
+
+  audio.playPhaseChime(true);
+
+
+  setHostPhase(
+    'NIGHT PHASE',
+
+    'Ask Everyone To Close Their Eyes'
+  );
+
+
+  renderHostRoster();
+
+
+  document.getElementById(
+    'host-dynamic-stage'
+  ).innerHTML = `
+
+    <div class="flex flex-col items-center
+                justify-center py-10 text-center
+                space-y-5">
+
+      <i data-lucide="moon"
+         class="w-16 h-16 text-crimson-500 animate-pulse">
+      </i>
+
+      <h4 class="text-2xl font-serif text-slate-200">
+        The Night Has Fallen
+      </h4>
+
+      <div class="bg-noir-950 p-5 rounded-2xl
+                  border border-slate-800
+                  max-w-lg text-left text-sm space-y-3">
+
+        <p>
+          <strong class="text-crimson-400">
+            Murderers:
+          </strong>
+          choose someone to eliminate.
+        </p>
+
+        <p>
+          <strong class="text-emerald-400">
+            Doctor:
+          </strong>
+          choose someone to protect.
+        </p>
+
+        <p>
+          <strong class="text-blue-400">
+            Detective:
+          </strong>
+          choose someone to investigate.
+        </p>
+
+        <p class="text-slate-500">
+          Innocents simply wait for morning.
+        </p>
+
+      </div>
+
+    </div>
+
+  `;
+
+
+  updateNightTrackerUI();
+
+
+  startTimer(
+    45,
+    resolveNightPhase
+  );
+
+
+  lucide.createIcons();
+}
+
+
+/* ============================================================
+   HOST PHASE UI
+============================================================ */
+
+function setHostPhase(
+  badge,
+  title
+) {
+
+  document.getElementById(
+    'host-phase-badge'
+  ).textContent =
+    badge;
+
+
+  document.getElementById(
+    'host-phase-title'
+  ).textContent =
+    title;
+}
+
+
+/* ============================================================
+   NIGHT ACTION
+============================================================ */
+
+function handleNightActionSubmit(
+  peerId,
+  action,
+  targetId
+) {
+
+  const player =
+    Object.values(
+      hostState.players
+    ).find(
+      p => p.peerId === peerId
+    );
+
+
+  if (!player) return;
+
+  if (!player.isAlive) return;
+
+  if (
+    hostState.phase !==
+    GAME_PHASES.NIGHT
+  ) return;
+
+
+  const target =
+    hostState.players[targetId];
+
+
+  if (!target || !target.isAlive) {
+
+    return;
+  }
+
+
+  if (
+    target.id ===
+    player.id
+  ) {
+
+    return;
+  }
+
+
+  if (
+    action === ROLES.MURDERER &&
+    player.role === ROLES.MURDERER
+  ) {
+
+    hostState.nightActions.murdererTarget =
+      targetId;
+
+  } else if (
+    action === ROLES.DOCTOR &&
+    player.role === ROLES.DOCTOR
+  ) {
+
+    hostState.nightActions.doctorTarget =
+      targetId;
+
+  } else if (
+    action === ROLES.DETECTIVE &&
+    player.role === ROLES.DETECTIVE
+  ) {
+
+    hostState.nightActions.detectiveTarget =
+      targetId;
+
+
+    net.sendToClient(
+      peerId,
+      {
+        type: 'INVESTIGATION_RESULT',
+
+        targetName:
+          target.name,
+
+        isMurderer:
+          target.role ===
+          ROLES.MURDERER
+      }
+    );
+  }
+
+
+  updateNightTrackerUI();
+
+
+  const murderSubmitted =
+    !!hostState.nightActions.murdererTarget;
+
+  const doctorSubmitted =
+    !!hostState.nightActions.doctorTarget;
+
+  const detectiveSubmitted =
+    !!hostState.nightActions.detectiveTarget;
+
+
+  const activeRoles =
+    new Set(
+      Object.values(
+        hostState.players
+      )
+      .filter(
+        p =>
+          p.isAlive &&
+          p.role !== ROLES.INNOCENT
+      )
+      .map(
+        p => p.role
+      )
+    );
+
+
+  let required =
+    activeRoles.size;
+
+
+  let submitted = 0;
+
+
+  if (
+    murderSubmitted &&
+    activeRoles.has(
+      ROLES.MURDERER
+    )
+  ) submitted++;
+
+
+  if (
+    doctorSubmitted &&
+    activeRoles.has(
+      ROLES.DOCTOR
+    )
+  ) submitted++;
+
+
+  if (
+    detectiveSubmitted &&
+    activeRoles.has(
+      ROLES.DETECTIVE
+    )
+  ) submitted++;
+
+
+  if (
+    required > 0 &&
+    submitted >= required
+  ) {
+
+    clearInterval(
+      hostState.timerInterval
+    );
+
+
+    setTimeout(
+      resolveNightPhase,
+      800
+    );
+  }
+}
+
+
+/* ============================================================
+   NIGHT TRACKER
+============================================================ */
+
+function updateNightTrackerUI() {
+
+  let count = 0;
+
+
+  if (
+    hostState.nightActions.murdererTarget
+  ) count++;
+
+
+  if (
+    hostState.nightActions.doctorTarget
+  ) count++;
+
+
+  if (
+    hostState.nightActions.detectiveTarget
+  ) count++;
+
+
+  document.getElementById(
+    'night-action-tracker'
+  ).textContent =
+    `${count} Night Submissions`;
+}
+
+
+/* ============================================================
+   RESOLVE NIGHT
+============================================================ */
+
+function resolveNightPhase() {
+
+  clearInterval(
+    hostState.timerInterval
+  );
+
+
+  const targetId =
+    hostState.nightActions
+      .murdererTarget;
+
+
+  const savedId =
+    hostState.nightActions
+      .doctorTarget;
+
+
+  let killedPlayer =
+    null;
+
+
+  if (
+    targetId &&
+    targetId !== savedId
+  ) {
+
+    killedPlayer =
+      hostState.players[targetId];
+
+
+    if (killedPlayer) {
+
+      killedPlayer.isAlive =
+        false;
+    }
+  }
+
+
+  hostState.lastKilled =
+    killedPlayer;
+
+
+  hostState.savedByDoctor =
+    !!(
+      targetId &&
+      targetId === savedId
+    );
+
+
+  startDayPhase();
+}
+
+
+/* ============================================================
+   DAY
+============================================================ */
+
+function startDayPhase() {
+
+  hostState.phase =
+    GAME_PHASES.DAY_REVEAL;
+
+
+  audio.playPhaseChime(false);
+
+
+  setHostPhase(
+    'DAY PHASE',
+    'Everyone Open Your Eyes!'
+  );
+
+
+  renderHostRoster();
+
+
+  net.broadcastToClients({
+
+    type: 'PHASE_CHANGE',
+
+    phase:
+      GAME_PHASES.DAY_REVEAL,
+
+    players:
+      getPublicPlayerList(),
+
+    lastKilledName:
+      hostState.lastKilled
+        ? hostState.lastKilled.name
+        : null,
+
+    savedByDoctor:
+      hostState.savedByDoctor
+
+  });
+
+
+  const killed =
+    hostState.lastKilled;
+
+
+  document.getElementById(
+    'host-dynamic-stage'
+  ).innerHTML = `
+
+    <div class="glass-panel p-6 rounded-2xl
+                border border-slate-800
+                text-center space-y-5">
+
+      ${
+        killed
+
+        ? `
+
+          <div class="inline-flex p-4
+                      bg-crimson-950
+                      border border-crimson-700
+                      rounded-full blood-glow">
+
+            <i data-lucide="skull"
+               class="w-12 h-12 text-crimson-500">
+            </i>
+
+          </div>
+
+          <h3 class="text-3xl font-serif font-bold text-white">
+
+            ${escapeHTML(killed.name)}
+            Was Eliminated!
+
+          </h3>
+
+          <p class="text-sm text-slate-400">
+            The town must discuss who they suspect.
+          </p>
+
+        `
+
+        : `
+
+          <div class="inline-flex p-4
+                      bg-emerald-950
+                      border border-emerald-700
+                      rounded-full">
+
+            <i data-lucide="shield-check"
+               class="w-12 h-12 text-emerald-400">
+            </i>
+
+          </div>
+
+          <h3 class="text-3xl font-serif font-bold text-white">
+            Nobody Was Eliminated!
+          </h3>
+
+          <p class="text-sm text-slate-400">
+            ${
+              hostState.savedByDoctor
+                ? 'The Doctor protected the target.'
+                : 'The night passed without an elimination.'
+            }
+          </p>
+
+        `
+      }
+
+
+      <button
+        id="btn-start-vote"
+        class="px-6 py-3 bg-crimson-600
+               hover:bg-crimson-500 text-white
+               font-bold rounded-xl"
+      >
+        Open Mobile Voting
+      </button>
+
+    </div>
+
+  `;
+
+
+  document
+    .getElementById('btn-start-vote')
+    .addEventListener(
+      'click',
+      openTownVoting
+    );
+
+
+  lucide.createIcons();
+
+
+  if (
+    checkWinConditions()
+  ) return;
+}
+
+
+/* ============================================================
+   OPEN VOTING
+============================================================ */
+
+function openTownVoting() {
+
+  hostState.phase =
+    GAME_PHASES.DAY_VOTE;
+
+
+  Object.values(
+    hostState.players
+  ).forEach(
+    player => {
+
+      player.vote =
+        null;
+    }
+  );
+
+
+  Object.values(
+    hostState.players
+  ).forEach(
+    player => {
+
+      if (
+        player.isAlive
+      ) {
+
+        net.sendToClient(
+          player.peerId,
+          {
+            type: 'PHASE_CHANGE',
+
+            phase:
+              GAME_PHASES.DAY_VOTE,
+
+            players:
+              getPublicPlayerList()
+          }
+        );
+      }
+    }
+  );
+
+
+  setHostPhase(
+    'DAY VOTE',
+    'Town Vote In Progress'
+  );
+
+
+  renderHostVoteStage();
+
+
+  startTimer(
+    60,
+    resolveTownVote
+  );
+}
+
+
+/* ============================================================
+   VOTE
+============================================================ */
+
+function handleVoteSubmit(
+  peerId,
+  targetId
+) {
+
+  const voter =
+    Object.values(
+      hostState.players
+    ).find(
+      p => p.peerId === peerId
+    );
+
+
+  if (!voter) return;
+
+  if (!voter.isAlive) return;
+
+
+  if (
+    hostState.phase !==
+    GAME_PHASES.DAY_VOTE
+  ) return;
+
+
+  const target =
+    hostState.players[targetId];
+
+
+  if (
+    !target ||
+    !target.isAlive ||
+    target.id === voter.id
+  ) {
+
+    return;
+  }
+
+
+  voter.vote =
+    targetId;
+
+
+  audio.playVoteSting();
+
+
+  renderHostVoteStage();
+
+
+  const alive =
+    Object.values(
+      hostState.players
+    )
+    .filter(
+      p => p.isAlive
+    );
+
+
+  const voted =
+    alive.filter(
+      p => p.vote !== null
+    );
+
+
+  if (
+    voted.length >= alive.length
+  ) {
+
+    clearInterval(
+      hostState.timerInterval
+    );
+
+
+    setTimeout(
+      resolveTownVote,
+      800
+    );
+  }
+}
+
+
+/* ============================================================
+   VOTE DISPLAY
+============================================================ */
+
+function renderHostVoteStage() {
+
+  const stage =
+    document.getElementById(
+      'host-dynamic-stage'
+    );
+
+
+  const alive =
+    Object.values(
+      hostState.players
+    )
+    .filter(
+      p => p.isAlive
+    );
+
+
+  const tallies = {};
+
+
+  alive.forEach(
+    player => {
+
+      if (player.vote) {
+
+        tallies[player.vote] =
+          (tallies[player.vote] || 0) + 1;
+      }
+    }
+  );
+
+
+  stage.innerHTML = `
+
+    <div class="space-y-5">
+
+      <div class="flex items-center justify-between
+                  text-xs text-slate-400">
+
+        <span>
+          Live Town Ballots
+        </span>
+
+        <span>
+          ${
+            alive.filter(
+              p => p.vote
+            ).length
+          }
+          /
+          ${alive.length}
+          Voted
+        </span>
+
+      </div>
+
+
+      <div class="grid sm:grid-cols-2 gap-3">
+
+        ${
+          alive.map(
+            player => `
+
+            <div class="bg-noir-950 p-4
+                        rounded-xl border
+                        border-slate-800
+                        flex items-center
+                        justify-between">
+
+              <span class="font-bold">
+                ${escapeHTML(player.name)}
+              </span>
+
+              <span class="px-3 py-1
+                           bg-crimson-950
+                           text-crimson-400
+                           font-mono font-bold
+                           rounded-lg text-sm">
+
+                ${tallies[player.id] || 0}
+
+              </span>
+
+            </div>
+
+          `
+          ).join('')
+        }
+
+      </div>
+
+    </div>
+
+  `;
+}
+
+
+/* ============================================================
+   RESOLVE VOTE
+============================================================ */
+
+function resolveTownVote() {
+
+  clearInterval(
+    hostState.timerInterval
+  );
+
+
+  const alive =
+    Object.values(
+      hostState.players
+    )
+    .filter(
+      p => p.isAlive
+    );
+
+
+  const tallies = {};
+
+
+  alive.forEach(
+    player => {
+
+      if (player.vote) {
+
+        tallies[player.vote] =
+          (tallies[player.vote] || 0) + 1;
+      }
+    }
+  );
+
+
+  let highest =
+    0;
+
+  let lynchedId =
+    null;
+
+  let tie =
+    false;
+
+
+  Object.entries(
+    tallies
+  ).forEach(
+    ([id, count]) => {
+
+      if (
+        count >
+        highest
+      ) {
+
+        highest =
+          count;
+
+        lynchedId =
+          id;
+
+        tie =
+          false;
+
+      } else if (
+        count === highest &&
+        count > 0
+      ) {
+
+        tie =
+          true;
+      }
+
+    }
+  );
+
+
+  let lynched =
+    null;
+
+
+  if (
+    lynchedId &&
+    !tie
+  ) {
+
+    lynched =
+      hostState.players[
+        lynchedId
+      ];
+
+
+    if (lynched) {
+
+      lynched.isAlive =
+        false;
+    }
+  }
+
+
+  renderHostRoster();
+
+
+  document.getElementById(
+    'host-dynamic-stage'
+  ).innerHTML = `
+
+    <div class="glass-panel p-6
+                rounded-2xl
+                border border-slate-800
+                text-center space-y-4">
+
+      <h3 class="text-2xl font-serif font-bold">
+        Vote Concluded
+      </h3>
+
+      ${
+        lynched
+
+        ? `
+
+          <p class="text-lg
+                    text-crimson-400
+                    font-bold">
+
+            ${escapeHTML(lynched.name)}
+            was voted out!
+
+          </p>
+
+          <p class="text-sm text-slate-400">
+
+            Role:
+            <strong class="text-white">
+              ${lynched.role}
+            </strong>
+
+          </p>
+
+        `
+
+        : `
+
+          <p class="text-lg
+                    text-amber-400
+                    font-bold">
+
+            ${
+              highest === 0
+                ? 'Nobody voted.'
+                : 'Tie vote! Nobody was eliminated.'
+            }
+
+          </p>
+
+        `
+      }
+
+    </div>
+
+  `;
+
+
+  net.broadcastToClients({
+
+    type: 'VOTE_RESULT',
+
+    eliminatedId:
+      lynched
+        ? lynched.id
+        : null,
+
+    players:
+      getPublicPlayerList()
+
+  });
+
+
+  if (
+    checkWinConditions()
+  ) return;
+
+
+  setTimeout(
+    startNightPhase,
+    3500
+  );
+}
+
+
+/* ============================================================
+   WIN CONDITIONS
+============================================================ */
+
+function checkWinConditions() {
+
+  const players =
+    Object.values(
+      hostState.players
+    );
+
+
+  const alive =
+    players.filter(
+      p => p.isAlive
+    );
+
+
+  const murderers =
+    alive.filter(
+      p =>
+        p.role ===
+        ROLES.MURDERER
+    );
+
+
+  const nonMurderers =
+    alive.filter(
+      p =>
+        p.role !==
+        ROLES.MURDERER
+    );
+
+
+  if (
+    murderers.length === 0
+  ) {
+
+    triggerGameOver(
+      'INNOCENTS WIN',
+      'All murderers have been eliminated.'
+    );
+
+    return true;
+  }
+
+
+  if (
+    murderers.length >=
+    nonMurderers.length
+  ) {
+
+    triggerGameOver(
+      'MURDERERS WIN',
+      'The murderers have taken control of the town.'
+    );
+
+    return true;
+  }
+
+
+  return false;
+}
+
+
+/* ============================================================
+   GAME OVER
+============================================================ */
+
+function triggerGameOver(
+  title,
+  subtitle
+) {
+
+  hostState.phase =
+    GAME_PHASES.GAME_OVER;
+
+
+  clearInterval(
+    hostState.timerInterval
+  );
+
+
+  const players =
+    Object.values(
+      hostState.players
+    );
+
+
+  net.broadcastToClients({
+
+    type: 'GAME_OVER',
+
+    title,
+
+    subtitle,
+
+    players:
+      players.map(
+        p => ({
+
+          id:
+            p.id,
+
+          name:
+            p.name,
+
+          role:
+            p.role,
+
+          isAlive:
+            p.isAlive
+        })
+      )
+
+  });
+
+
+  document.getElementById(
+    'victory-title'
+  ).textContent =
+    title;
+
+
+  document.getElementById(
+    'victory-subtitle'
+  ).textContent =
+    subtitle;
+
+
+  document.getElementById(
+    'final-roles-list'
+  ).innerHTML =
+    players.map(
+      player => `
+
+        <div class="flex items-center
+                    justify-between p-2
+                    rounded bg-slate-900/80
+                    border border-slate-800">
+
+          <span class="font-bold">
+            ${escapeHTML(player.name)}
+          </span>
+
+          <span class="text-xs font-mono font-bold
+                       ${
+                         player.role === ROLES.MURDERER
+                           ? 'text-crimson-400'
+                           : player.role === ROLES.DETECTIVE
+                           ? 'text-blue-400'
+                           : player.role === ROLES.DOCTOR
+                           ? 'text-emerald-400'
+                           : 'text-slate-400'
+                       }">
+
+            ${player.role}
+
+          </span>
+
+        </div>
+
+      `
+    ).join('');
+
+
+  showView(
+    views.gameOver
+  );
+}
+
+
+/* ============================================================
+   RESTART
+============================================================ */
+
+document
+  .getElementById('btn-restart')
+  .addEventListener(
+    'click',
+    () => {
+
+      net.destroy();
+
+      window.location.href =
+        window.location.pathname;
+    }
+  );
+
+
+/* ============================================================
+   FORCE ADVANCE
+============================================================ */
+
+document
+  .getElementById('btn-host-next-phase')
+  .addEventListener(
+    'click',
+    () => {
+
+      if (
+        hostState.phase ===
+        GAME_PHASES.NIGHT
+      ) {
+
+        resolveNightPhase();
+
+      } else if (
+        hostState.phase ===
+        GAME_PHASES.DAY_VOTE
+      ) {
+
+        resolveTownVote();
+      }
+    }
+  );
+
+
+/* ============================================================
+   TIMER
+============================================================ */
+
+function startTimer(
+  seconds,
+  callback
+) {
+
+  clearInterval(
+    hostState.timerInterval
+  );
+
+
+  hostState.timerSeconds =
+    seconds;
+
+
+  updateTimerDisplay();
+
+
+  hostState.timerInterval =
+    setInterval(
+      () => {
+
+        hostState.timerSeconds--;
+
+        updateTimerDisplay();
+
+
+        if (
+          hostState.timerSeconds <= 0
+        ) {
+
+          clearInterval(
+            hostState.timerInterval
+          );
+
+
+          if (callback) {
+            callback();
+          }
+
+        }
+
+      },
+      1000
+    );
+}
+
+
+function updateTimerDisplay() {
+
+  const minutes =
+    Math.floor(
+      hostState.timerSeconds / 60
+    )
+    .toString()
+    .padStart(2, '0');
+
+
+  const seconds =
+    (
+      hostState.timerSeconds % 60
+    )
+    .toString()
+    .padStart(2, '0');
+
+
+  document.getElementById(
+    'host-timer'
+  ).textContent =
+    `${minutes}:${seconds}`;
+}
+
+
+/* ============================================================
+   HOST ROSTER
+============================================================ */
+
+function renderHostRoster() {
+
+  const roster =
+    document.getElementById(
+      'host-roster-list'
+    );
+
+
+  const players =
+    Object.values(
+      hostState.players
+    );
+
+
+  const alive =
+    players.filter(
+      p => p.isAlive
+    ).length;
+
+
+  roster.innerHTML =
+    players.map(
+      player => `
+
+        <div class="p-2.5 rounded-xl border
+                    ${
+                      player.isAlive
+                        ? 'bg-noir-950 border-slate-800'
+                        : 'bg-crimson-950/20 border-crimson-900/40 opacity-50'
+                    }
+                    flex items-center justify-between">
+
+          <span class="text-sm font-semibold
+                       ${
+                         player.isAlive
+                           ? 'text-slate-200'
+                           : 'text-slate-500 line-through'
+                       }">
+
+            ${escapeHTML(player.name)}
+
+          </span>
+
+          <span class="text-[10px] font-mono
+                       px-2 py-0.5 rounded
+                       ${
+                         player.isAlive
+                           ? 'bg-emerald-950 text-emerald-400'
+                           : 'bg-slate-800 text-slate-500'
+                       }">
+
+            ${
+              player.isAlive
+                ? 'ALIVE'
+                : 'OUT'
+            }
+
+          </span>
+
+        </div>
+
+      `
+    ).join('');
+
+
+  document.getElementById(
+    'living-ratio'
+  ).textContent =
+    `${alive}/${players.length} Alive`;
+}
+
+
+/* ============================================================
+   PLAYER MESSAGE HANDLER
+============================================================ */
+
+function handleClientReceivedData(
+  data
+) {
+
+  if (!data) return;
+
+
+  switch (data.type) {
+
+
+    case 'JOIN_SUCCESS':
+
+      document.getElementById(
+        'player-status-tag'
+      ).textContent =
+        'Connected';
+
+
+      document.getElementById(
+        'player-status-tag'
+      ).className =
+        'text-[10px] text-emerald-400 font-semibold uppercase';
+
+
+      renderPlayerWaitScreen(
+        'Connected! Waiting for the host to start...'
+      );
+
+      break;
+
+
+    case 'ERROR':
+
+      showToast(
+        data.message || 'Game error.',
+        'error'
+      );
+
+      renderPlayerWaitScreen(
+        data.message || 'Unable to join.'
+      );
+
+      break;
+
+
+    case 'ROLE_ASSIGNMENT':
+
+      localPlayer.role =
+        data.role;
+
+
+      setupPlayerRoleCard(
+        data.role
+      );
+
+
+      break;
+
+
+    case 'PHASE_CHANGE':
+
+      handlePlayerPhaseChange(
+        data
+      );
+
+      break;
+
+
+    case 'INVESTIGATION_RESULT':
+
+      showInvestigationResult(
+        data
+      );
+
+      break;
+
+
+    case 'VOTE_RESULT':
+
+      handlePlayerVoteResult(
+        data
+      );
+
+      break;
+
+
+    case 'GAME_OVER':
+
+      document.getElementById(
+        'victory-title'
+      ).textContent =
+        data.title;
+
+
+      document.getElementById(
+        'victory-subtitle'
+      ).textContent =
+        data.subtitle;
+
+
+      if (data.players) {
+
+        document.getElementById(
+          'final-roles-list'
+        ).innerHTML =
+          data.players.map(
+            player => `
+
+              <div class="flex justify-between
+                          p-2 rounded
+                          bg-slate-900
+                          border border-slate-800">
+
+                <span>
+                  ${escapeHTML(player.name)}
+                </span>
+
+                <span class="font-mono text-xs">
+                  ${player.role}
+                </span>
+
+              </div>
+
+            `
+          ).join('');
+      }
+
+
+      showView(
+        views.gameOver
+      );
+
+      break;
+
+  }
+}
+
+
+/* ============================================================
+   ROLE CARD
+============================================================ */
+
+function setupPlayerRoleCard(
+  role
+) {
+
+  const title =
+    document.getElementById(
+      'player-role-title'
+    );
+
+
+  const desc =
+    document.getElementById(
+      'player-role-desc'
+    );
+
+
+  title.textContent =
+    role;
+
+
+  if (
+    role === ROLES.MURDERER
+  ) {
+
+    title.className =
+      'text-2xl font-serif font-black uppercase text-crimson-500';
+
+    desc.textContent =
+      'Secretly eliminate players during the Night Phase.';
+
+  } else if (
+    role === ROLES.DETECTIVE
+  ) {
+
+    title.className =
+      'text-2xl font-serif font-black uppercase text-blue-400';
+
+    desc.textContent =
+      'Inspect one player each night.';
+
+  } else if (
+    role === ROLES.DOCTOR
+  ) {
+
+    title.className =
+      'text-2xl font-serif font-black uppercase text-emerald-400';
+
+    desc.textContent =
+      'Protect one player each night.';
+
+  } else {
+
+    title.className =
+      'text-2xl font-serif font-black uppercase text-slate-200';
+
+    desc.textContent =
+      'Survive and vote out the murderers.';
+  }
+
+
+  const box =
+    document.getElementById(
+      'role-reveal-box'
+    );
+
+
+  const hidden =
+    document.getElementById(
+      'role-hidden-content'
+    );
+
+
+  const revealed =
+    document.getElementById(
+      'role-revealed-content'
+    );
+
+
+  /*
+    Remove old listeners by replacing the element.
+  */
+
+  const newBox =
+    box.cloneNode(true);
+
+
+  box.parentNode.replaceChild(
+    newBox,
+    box
+  );
+
+
+  const startReveal =
+    event => {
+
+      if (
+        event.type === 'touchstart'
+      ) {
+
+        event.preventDefault();
+      }
+
+      hidden.classList.add(
+        'hidden'
+      );
+
+      revealed.classList.remove(
+        'hidden'
+      );
+    };
+
+
+  const endReveal =
+    () => {
+
+      hidden.classList.remove(
+        'hidden'
+      );
+
+      revealed.classList.add(
+        'hidden'
+      );
+    };
+
+
+  newBox.addEventListener(
+    'mousedown',
+    startReveal
+  );
+
+
+  newBox.addEventListener(
+    'mouseup',
+    endReveal
+  );
+
+
+  newBox.addEventListener(
+    'mouseleave',
+    endReveal
+  );
+
+
+  newBox.addEventListener(
+    'touchstart',
+    startReveal,
+    { passive: false }
+  );
+
+
+  newBox.addEventListener(
+    'touchend',
+    endReveal
+  );
+
+
+  newBox.addEventListener(
+    'touchcancel',
+    endReveal
+  );
+}
+
+
+/* ============================================================
+   PLAYER PHASE CHANGE
+============================================================ */
+
+function handlePlayerPhaseChange(
+  data
+) {
+
+  const me =
+    data.players.find(
+      p =>
+        p.id ===
+        localPlayer.id
+    );
+
+
+  if (me) {
+
+    localPlayer.isAlive =
+      me.isAlive;
+  }
+
+
+  updatePlayerStatus();
+
+
+  if (
+    !localPlayer.isAlive
+  ) {
+
+    renderPlayerDeadScreen();
+
+    return;
+  }
+
+
+  if (
+    data.phase ===
+    GAME_PHASES.NIGHT
+  ) {
+
+    localPlayer.hasSubmittedNightAction =
+      false;
+
+    renderPlayerNightActions(
+      data.players
+    );
+
+  } else if (
+    data.phase ===
+    GAME_PHASES.DAY_REVEAL
+  ) {
+
+    localPlayer.hasVoted =
+      false;
+
+    renderPlayerDayReveal(
+      data
+    );
+
+  } else if (
+    data.phase ===
+    GAME_PHASES.DAY_VOTE
+  ) {
+
+    localPlayer.hasVoted =
+      false;
+
+    renderPlayerVoteActions(
+      data.players
+    );
+  }
+}
+
+
+/* ============================================================
+   PLAYER STATUS
+============================================================ */
+
+function updatePlayerStatus() {
+
+  const status =
+    document.getElementById(
+      'player-status-tag'
+    );
+
+
+  if (
+    localPlayer.isAlive
+  ) {
+
+    status.textContent =
+      'Alive';
+
+    status.className =
+      'text-[10px] text-emerald-400 font-semibold uppercase';
+
+  } else {
+
+    status.textContent =
+      'Out';
+
+    status.className =
+      'text-[10px] text-crimson-500 font-semibold uppercase';
+  }
+}
+
+
+/* ============================================================
+   PLAYER NIGHT
+============================================================ */
+
+function renderPlayerNightActions(
+  players
+) {
+
+  const box =
+    document.getElementById(
+      'player-action-box'
+    );
+
+
+  if (
+    localPlayer.role ===
+    ROLES.INNOCENT
+  ) {
+
+    box.innerHTML = `
+
+      <div class="text-center space-y-3 py-5">
+
+        <i data-lucide="moon"
+           class="w-8 h-8 text-slate-500 mx-auto">
+        </i>
+
+        <h4 class="font-bold">
+          Close Your Eyes
+        </h4>
+
+        <p class="text-xs text-slate-400">
+          Wait for the host to announce morning.
+        </p>
+
+      </div>
+
+    `;
+
+
+    lucide.createIcons();
+
+    return;
+  }
+
+
+  let prompt =
+    'Choose a target';
+
+
+  if (
+    localPlayer.role ===
+    ROLES.MURDERER
+  ) {
+
+    prompt =
+      'Choose someone to eliminate';
+
+  } else if (
+    localPlayer.role ===
+    ROLES.DOCTOR
+  ) {
+
+    prompt =
+      'Choose someone to protect';
+
+  } else if (
+    localPlayer.role ===
+    ROLES.DETECTIVE
+  ) {
+
+    prompt =
+      'Choose someone to investigate';
+  }
+
+
+  const candidates =
+    players.filter(
+      p =>
+        p.isAlive &&
+        p.id !== localPlayer.id
+    );
+
+
+  box.innerHTML = `
+
+    <div class="space-y-4">
+
+      <div class="text-center">
+
+        <h4 class="font-bold">
+          ${prompt}
+        </h4>
+
+        <p class="text-xs text-slate-400 mt-1">
+          Tap a player below.
+        </p>
+
+      </div>
+
+
+      <div class="space-y-2 max-h-64 overflow-y-auto">
+
+        ${
+          candidates.map(
+            player => `
+
+              <button
+                class="player-target-btn
+                       w-full p-4 rounded-xl
+                       bg-noir-950
+                       border border-slate-800
+                       hover:border-crimson-500
+                       active:bg-crimson-950
+                       text-left font-semibold
+                       transition"
+                data-id="${player.id}"
+              >
+
+                ${escapeHTML(player.name)}
+
+              </button>
+
+            `
+          ).join('')
+        }
+
+      </div>
+
+    </div>
+
+  `;
+
+
+  box
+    .querySelectorAll(
+      '.player-target-btn'
+    )
+    .forEach(
+      button => {
+
+        button.addEventListener(
+          'click',
+          event => {
+
+            if (
+              localPlayer.hasSubmittedNightAction
+            ) return;
+
+
+            localPlayer.hasSubmittedNightAction =
+              true;
+
+
+            const targetId =
+              event.currentTarget.dataset.id;
+
+
+            net.sendToHost({
+
+              type:
+                'NIGHT_ACTION',
+
+              action:
+                localPlayer.role,
+
+              targetId
+            });
+
+
+            renderPlayerWaitScreen(
+              'Action submitted. Waiting for dawn...'
+            );
+
+          }
+        );
+
+      }
+    );
+
+
+  lucide.createIcons();
+}
+
+
+/* ============================================================
+   DAY REVEAL
+============================================================ */
+
+function renderPlayerDayReveal(
+  data
+) {
+
+  const box =
+    document.getElementById(
+      'player-action-box'
+    );
+
+
+  let message =
+    'Look at the host screen for the night outcome.';
+
+
+  if (
+    data.lastKilledName
+  ) {
+
+    message =
+      `${data.lastKilledName} was eliminated during the night.`;
+
+  } else if (
+    data.savedByDoctor
+  ) {
+
+    message =
+      'The Doctor successfully protected the target. Nobody was eliminated.';
+  }
+
+
+  box.innerHTML = `
+
+    <div class="text-center space-y-4 py-5">
+
+      <i data-lucide="sun"
+         class="w-10 h-10 text-amber-400 mx-auto">
+      </i>
+
+      <h4 class="font-bold text-white">
+        Day Phase
+      </h4>
+
+      <p class="text-sm text-slate-300">
+        ${escapeHTML(message)}
+      </p>
+
+      <p class="text-xs text-slate-500">
+        Discuss with the group, then wait for voting.
+      </p>
+
+    </div>
+
+  `;
+
+
+  lucide.createIcons();
+}
+
+
+/* ============================================================
+   PLAYER VOTE
+============================================================ */
+
+function renderPlayerVoteActions(
+  players
+) {
+
+  const box =
+    document.getElementById(
+      'player-action-box'
+    );
+
+
+  const candidates =
+    players.filter(
+      p =>
+        p.isAlive &&
+        p.id !== localPlayer.id
+    );
+
+
+  box.innerHTML = `
+
+    <div class="space-y-4">
+
+      <div class="text-center">
+
+        <i data-lucide="vote"
+           class="w-8 h-8 text-indigo-400 mx-auto mb-2">
+        </i>
+
+        <h4 class="font-bold">
+          Cast Your Vote
+        </h4>
+
+        <p class="text-xs text-slate-400 mt-1">
+          Who do you suspect?
+        </p>
+
+      </div>
+
+
+      <div class="space-y-2 max-h-64 overflow-y-auto">
+
+        ${
+          candidates.map(
+            player => `
+
+              <button
+                class="player-vote-btn
+                       w-full p-4 rounded-xl
+                       bg-noir-950
+                       border border-slate-800
+                       hover:border-indigo-500
+                       active:bg-indigo-950
+                       text-left font-semibold
+                       transition"
+                data-id="${player.id}"
+              >
+
+                ${escapeHTML(player.name)}
+
+              </button>
+
+            `
+          ).join('')
+        }
+
+      </div>
+
+    </div>
+
+  `;
+
+
+  box
+    .querySelectorAll(
+      '.player-vote-btn'
+    )
+    .forEach(
+      button => {
+
+        button.addEventListener(
+          'click',
+          event => {
+
+            if (
+              localPlayer.hasVoted
+            ) return;
+
+
+            localPlayer.hasVoted =
+              true;
+
+
+            const targetId =
+              event.currentTarget.dataset.id;
+
+
+            net.sendToHost({
+
+              type:
+                'CAST_VOTE',
+
+              targetId
+
+            });
+
+
+            renderPlayerWaitScreen(
+              'Vote submitted. Waiting for the town...'
+            );
+
+          }
+        );
+
+      }
+    );
+
+
+  lucide.createIcons();
+}
+
+
+/* ============================================================
+   VOTE RESULT
+============================================================ */
+
+function handlePlayerVoteResult(
+  data
+) {
+
+  if (
+    data.eliminatedId ===
+    localPlayer.id
+  ) {
+
+    localPlayer.isAlive =
+      false;
+
+
+    updatePlayerStatus();
+
+
+    renderPlayerDeadScreen();
+
+  } else {
+
+    renderPlayerWaitScreen(
+      'Vote concluded. Waiting for the next night...'
+    );
+  }
+}
+
+
+/* ============================================================
+   INVESTIGATION
+============================================================ */
+
+function showInvestigationResult(
+  data
+) {
+
+  const result =
+    data.isMurderer
+      ? `${data.targetName} IS A MURDERER`
+      : `${data.targetName} is NOT a murderer`;
+
+
+  showToast(
+    result
+  );
+
+
+  const box =
+    document.getElementById(
+      'player-action-box'
+    );
+
+
+  box.innerHTML = `
+
+    <div class="text-center space-y-4 py-6">
+
+      <i data-lucide="search-check"
+         class="w-10 h-10 text-blue-400 mx-auto">
+      </i>
+
+      <h4 class="font-bold text-blue-400">
+        Investigation Result
+      </h4>
+
+      <p class="text-sm text-white">
+        ${escapeHTML(result)}
+      </p>
+
+      <p class="text-xs text-slate-500">
+        The result is visible only to you.
+      </p>
+
+    </div>
+
+  `;
+
+
+  lucide.createIcons();
+}
+
+
+/* ============================================================
+   WAIT SCREEN
+============================================================ */
+
+function renderPlayerWaitScreen(
+  message
+) {
+
+  const box =
+    document.getElementById(
+      'player-action-box'
+    );
+
+
+  box.innerHTML = `
+
+    <div class="text-center space-y-4 py-7">
+
+      <i data-lucide="loader"
+         class="w-8 h-8 text-crimson-500
+                animate-spin mx-auto">
+      </i>
+
+      <p class="text-sm font-semibold text-slate-300">
+        ${escapeHTML(message)}
+      </p>
+
+    </div>
+
+  `;
+
+
+  lucide.createIcons();
+}
+
+
+/* ============================================================
+   DEAD SCREEN
+============================================================ */
+
+function renderPlayerDeadScreen() {
+
+  const box =
+    document.getElementById(
+      'player-action-box'
+    );
+
+
+  box.innerHTML = `
+
+    <div class="text-center space-y-4 py-7">
+
+      <i data-lucide="ghost"
+         class="w-10 h-10 text-slate-600 mx-auto">
+      </i>
+
+      <h4 class="font-serif text-xl font-bold text-slate-400">
+        You Are Out
+      </h4>
+
+      <p class="text-xs text-slate-500">
+        You can watch the rest of the game,
+        but you cannot vote or perform actions.
+      </p>
+
+    </div>
+
+  `;
+
+
+  lucide.createIcons();
+}
+
+</script>
+
+</body>
+</html>
